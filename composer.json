@@ -9,21 +9,21 @@
     "minimum-stability": "dev",
     "prefer-stable": true,
     "require": {
-        "php": "^7.4",
-        "doctrine/dbal": "^3.0",
+        "php": ">=8.3",
+        "doctrine/dbal": "^3.9",
         "doctrine/migrations": "^3.1",
-        "psr/log": "^1.0 || ^2.0 || ^3.0",
-        "symfony/dependency-injection": "^5.4",
-        "symfony/http-kernel": "^5.4"
+        "psr/log": "^3.0",
+        "symfony/dependency-injection": "^7.3",
+        "symfony/http-kernel": "^7.3"
     },
     "require-dev": {
         "ibexa/code-style": "~2.3.0",
         "phpstan/phpstan": "^2.0",
         "phpstan/phpstan-phpunit": "^2.0",
         "phpstan/phpstan-symfony": "^2.0",
-        "phpunit/phpunit": "^9.5",
-        "symfony/framework-bundle": "^5.4",
-        "symfony/phpunit-bridge": "^5.4"
+        "phpunit/phpunit": "^11.0",
+        "symfony/framework-bundle": "^7.4",
+        "symfony/phpunit-bridge": "^8.1"
     },
     "autoload": {
         "psr-4": {

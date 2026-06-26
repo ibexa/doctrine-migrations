@@ -8,8 +8,8 @@ declare(strict_types=1);
 
 namespace Ibexa\Bundle\DoctrineMigrations;
 
-use Symfony\Component\HttpKernel\Bundle\Bundle;
+use Symfony\Component\HttpKernel\Bundle\AbstractBundle;
 
-final class IbexaDoctrineMigrationsBundle extends Bundle
+final class IbexaDoctrineMigrationsBundle extends AbstractBundle
 {
 }
