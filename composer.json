@@ -1,0 +1,66 @@
+{
+    "name": "ibexa/doctrine-migrations",
+    "description": "Symfony Bundle providing service-based Doctrine Migrations infrastructure for Ibexa packages",
+    "license": "proprietary",
+    "type": "ibexa-bundle",
+    "keywords": [
+        "ibexa-dxp"
+    ],
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "require": {
+        "php": "^7.4",
+        "doctrine/dbal": "^3.0",
+        "doctrine/migrations": "^3.1",
+        "psr/log": "^1.0 || ^2.0 || ^3.0",
+        "symfony/dependency-injection": "^5.4",
+        "symfony/http-kernel": "^5.4"
+    },
+    "require-dev": {
+        "ibexa/code-style": "~2.3.0",
+        "phpstan/phpstan": "^2.0",
+        "phpstan/phpstan-phpunit": "^2.0",
+        "phpstan/phpstan-symfony": "^2.0",
+        "phpunit/phpunit": "^9.5",
+        "symfony/framework-bundle": "^5.4",
+        "symfony/phpunit-bridge": "^5.4"
+    },
+    "autoload": {
+        "psr-4": {
+            "Ibexa\\DoctrineMigrations\\": "src/lib/",
+            "Ibexa\\Bundle\\DoctrineMigrations\\": "src/bundle/",
+            "Ibexa\\Contracts\\DoctrineMigrations\\": "src/contracts/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Ibexa\\Tests\\Bundle\\DoctrineMigrations\\": "tests/bundle/",
+            "Ibexa\\Tests\\DoctrineMigrations\\": "tests/lib/"
+        }
+    },
+    "scripts": {
+        "fix-cs": "php-cs-fixer fix --config=.php-cs-fixer.php --show-progress=dots",
+        "check-cs": "@fix-cs --dry-run",
+        "test": "phpunit -c phpunit.xml.dist",
+        "phpstan": "phpstan analyse -c phpstan.neon",
+        "deptrac": "php vendor/bin/deptrac analyse"
+    },
+    "scripts-descriptions": {
+        "fix-cs": "Automatically fixes code style in all files",
+        "check-cs": "Run code style checker for all files",
+        "test": "Run automatic tests",
+        "phpstan": "Run static code analysis",
+        "deptrac": "Run Deptrac architecture testing"
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-6.0": "6.0.x-dev",
+            "dev-5.0": "5.0.x-dev",
+            "dev-4.6": "4.6.x-dev"
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": false
+    }
+}
