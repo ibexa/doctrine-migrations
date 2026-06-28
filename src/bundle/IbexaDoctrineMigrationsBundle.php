@@ -10,6 +10,4 @@ namespace Ibexa\Bundle\DoctrineMigrations;
 
 use Symfony\Component\HttpKernel\Bundle\AbstractBundle;
 
-final class IbexaDoctrineMigrationsBundle extends AbstractBundle
-{
-}
+final class IbexaDoctrineMigrationsBundle extends AbstractBundle {}
