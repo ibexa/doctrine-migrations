@@ -13,7 +13,8 @@ use Symfony\Component\DependencyInjection\Extension\Extension;
 
 final class IbexaDoctrineMigrationsExtension extends Extension
 {
-    public function load(array $configs, ContainerBuilder $container): void
-    {
-    }
+    public function load(
+        array $configs,
+        ContainerBuilder $container
+    ): void {}
 }
