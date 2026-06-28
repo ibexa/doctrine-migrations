@@ -10,7 +10,7 @@ on:
 jobs:
   cs-fix:
     name: Run code style check
-    runs-on: "ubuntu-26.04"
+    runs-on: "ubuntu-24.04"
     strategy:
       matrix:
         php:
@@ -25,7 +25,7 @@ jobs:
 
   tests:
     name: Tests
-    runs-on: "ubuntu-26.04"
+    runs-on: "ubuntu-24.04"
     timeout-minutes: 10
 
     strategy:
@@ -53,14 +53,13 @@ jobs:
   integration-tests:
     name: Integration tests
     needs: tests
-    runs-on: "ubuntu-26.04"
+    runs-on: "ubuntu-24.04"
     timeout-minutes: 10
 
     strategy:
       fail-fast: false
       matrix:
         php:
-          - '7.4'
           - '8.3'
           - '8.4'
 

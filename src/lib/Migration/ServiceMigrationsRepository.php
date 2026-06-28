@@ -36,6 +36,7 @@ use Symfony\Contracts\Service\ServiceProviderInterface;
  */
 final class ServiceMigrationsRepository implements MigrationsRepository
 {
+    /** @var ServiceProviderInterface<AbstractMigration> */
     private ServiceProviderInterface $container;
 
     private ?MigrationsRepository $inner;
@@ -43,6 +44,7 @@ final class ServiceMigrationsRepository implements MigrationsRepository
     /** @var array<string, AvailableMigration> */
     private array $migrations = [];
 
+    /** @param ServiceProviderInterface<AbstractMigration> $container */
     public function __construct(
         ServiceProviderInterface $container,
         ?MigrationsRepository $inner = null

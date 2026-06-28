@@ -20,9 +20,9 @@ use Symfony\Contracts\Service\ServiceProviderInterface;
 
 final class ServiceMigrationsRepositoryTest extends TestCase
 {
-    private const MIGRATION_ID = 'App\\Migrations\\Version20260101';
+    private const string MIGRATION_ID = 'App\\Migrations\\Version20260101';
 
-    private const OTHER_MIGRATION_ID = 'App\\Migrations\\Version20260201';
+    private const string OTHER_MIGRATION_ID = 'App\\Migrations\\Version20260201';
 
     // ── hasMigration ──────────────────────────────────────────────────────────
 
@@ -256,7 +256,7 @@ final class ServiceMigrationsRepositoryTest extends TestCase
      * @param array<string, AbstractMigration> $getMap
      * @param array<string, string> $providedServices
      *
-     * @return ServiceProviderInterface
+     * @return ServiceProviderInterface<AbstractMigration>
      */
     private function buildContainer(
         array $hasMap,
