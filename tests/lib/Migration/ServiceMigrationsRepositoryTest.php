@@ -269,7 +269,7 @@ final class ServiceMigrationsRepositoryTest extends TestCase
             static fn (string $id): bool => $hasMap[$id] ?? false,
         );
         $container->method('get')->willReturnCallback(
-            static fn (string $id): AbstractMigration|null => $getMap[$id] ?? null,
+            static fn (string $id): AbstractMigration | null => $getMap[$id] ?? null,
         );
         $container->method('getProvidedServices')->willReturn($providedServices);
 
