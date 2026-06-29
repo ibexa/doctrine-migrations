@@ -120,7 +120,7 @@ final class RegisterMigrationsPassTest extends TestCase
 
     public function testComparatorIsNotRegisteredWhenNotDefined(): void
     {
-        $container = $this->buildBaseContainer(withComparator: false);
+        $container = $this->buildBaseContainer(false);
 
         (new RegisterMigrationsPass())->process($container);
 
@@ -198,10 +198,13 @@ final class RegisterMigrationsPassTest extends TestCase
         return $types;
     }
 
+    /**
+     * @return mixed
+     */
     private function getSetDefinitionArg(
         ContainerBuilder $container,
         string $type
-    ): mixed {
+    ) {
         foreach ($container->getDefinition('doctrine.migrations.dependency_factory')->getMethodCalls() as $call) {
             if (!is_array($call) || $call[0] !== 'setDefinition') {
                 continue;
