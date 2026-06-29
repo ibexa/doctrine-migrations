@@ -261,7 +261,7 @@ final class ServiceMigrationsRepositoryTest extends TestCase
     private function buildContainer(
         array $hasMap,
         array $getMap = [],
-        array $providedServices = [],
+        array $providedServices = []
     ): ServiceProviderInterface {
         $container = $this->createMock(ServiceProviderInterface::class);
 
