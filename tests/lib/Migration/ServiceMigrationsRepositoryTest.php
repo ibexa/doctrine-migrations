@@ -261,7 +261,7 @@ final class ServiceMigrationsRepositoryTest extends TestCase
     private function buildContainer(
         array $hasMap,
         array $getMap = [],
-        array $providedServices = []
+        array $providedServices = [],
     ): ServiceProviderInterface {
         $container = $this->createMock(ServiceProviderInterface::class);
 
@@ -269,7 +269,7 @@ final class ServiceMigrationsRepositoryTest extends TestCase
             static fn (string $id): bool => $hasMap[$id] ?? false,
         );
         $container->method('get')->willReturnCallback(
-            static fn (string $id): ?AbstractMigration => $getMap[$id] ?? null,
+            static fn (string $id): AbstractMigration|null => $getMap[$id] ?? null,
         );
         $container->method('getProvidedServices')->willReturn($providedServices);
 
