@@ -8,7 +8,6 @@ declare(strict_types=1);
 
 namespace Ibexa\Bundle\DoctrineMigrations\Migrations;
 
-use Doctrine\DBAL\Platforms\MySQLPlatform;
 use Doctrine\DBAL\Platforms\PostgreSQL100Platform;
 use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
@@ -21,7 +20,7 @@ abstract class AbstractVersion extends AbstractMigration
         $this->ensureDatabasePlatform();
 
         $platform = $this->connection->getDatabasePlatform();
-        if ($platform instanceof MySQLPlatform) {
+        if ($this->isMysqlPlatform()) {
             $this->upForMysql($schema);
         }
 
@@ -35,9 +34,8 @@ abstract class AbstractVersion extends AbstractMigration
      */
     final protected function ensureDatabasePlatform(): void
     {
-        $platform = $this->connection->getDatabasePlatform();
         $this->abortIf(
-            !$platform instanceof MySQLPlatform && !$platform instanceof PostgreSQL100Platform,
+            !$this->isMysqlPlatform() && !$this->connection->getDatabasePlatform() instanceof PostgreSQL100Platform,
             'Migration can only be executed safely on \'mysql\' or \'postgresql\'.',
         );
     }
@@ -45,4 +43,14 @@ abstract class AbstractVersion extends AbstractMigration
     abstract protected function upForMysql(Schema $schema): void;
 
     abstract protected function upForPostgresql(Schema $schema): void;
+
+    private function isMysqlPlatform(): bool
+    {
+        // DBAL 3 uses MySQLPlatform; DBAL 2 uses MySqlPlatform
+        $class = class_exists('Doctrine\\DBAL\\Platforms\\MySQLPlatform')
+            ? 'Doctrine\\DBAL\\Platforms\\MySQLPlatform'
+            : 'Doctrine\\DBAL\\Platforms\\MySqlPlatform';
+
+        return $this->connection->getDatabasePlatform() instanceof $class;
+    }
 }

@@ -8,7 +8,6 @@ declare(strict_types=1);
 
 namespace Ibexa\Bundle\DoctrineMigrations\Migrations\Mysql;
 
-use Doctrine\DBAL\Platforms\MySQLPlatform;
 use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaMigrationInterface;
@@ -18,7 +17,7 @@ abstract class AbstractMysqlVersion extends AbstractMigration implements IbexaMi
     final public function up(Schema $schema): void
     {
         $this->skipIf(
-            !($this->connection->getDatabasePlatform() instanceof MySQLPlatform),
+            !$this->isMysqlPlatform(),
             'This migration is MySQL-specific.',
         );
 
@@ -28,7 +27,7 @@ abstract class AbstractMysqlVersion extends AbstractMigration implements IbexaMi
     final public function down(Schema $schema): void
     {
         $this->skipIf(
-            !($this->connection->getDatabasePlatform() instanceof MySQLPlatform),
+            !$this->isMysqlPlatform(),
             'This migration is MySQL-specific.',
         );
 
@@ -38,4 +37,14 @@ abstract class AbstractMysqlVersion extends AbstractMigration implements IbexaMi
     abstract protected function doUp(Schema $schema): void;
 
     abstract protected function doDown(Schema $schema): void;
+
+    private function isMysqlPlatform(): bool
+    {
+        // DBAL 3 uses MySQLPlatform; DBAL 2 uses MySqlPlatform
+        $class = class_exists('Doctrine\\DBAL\\Platforms\\MySQLPlatform')
+            ? 'Doctrine\\DBAL\\Platforms\\MySQLPlatform'
+            : 'Doctrine\\DBAL\\Platforms\\MySqlPlatform';
+
+        return $this->connection->getDatabasePlatform() instanceof $class;
+    }
 }

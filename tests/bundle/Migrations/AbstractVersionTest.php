@@ -10,7 +10,6 @@ namespace Ibexa\Tests\Bundle\DoctrineMigrations\Migrations;
 
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
-use Doctrine\DBAL\Platforms\MySQLPlatform;
 use Doctrine\DBAL\Platforms\PostgreSQL100Platform;
 use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\Exception\AbortMigration;
@@ -22,7 +21,7 @@ final class AbstractVersionTest extends TestCase
 {
     public function testUpDispatchesToUpForMysqlOnMySQLPlatform(): void
     {
-        $migration = $this->buildMigration($this->createMock(MySQLPlatform::class));
+        $migration = $this->buildMigration($this->createMock($this->getMysqlPlatformClass()));
 
         $migration->up($this->createMock(Schema::class));
 
@@ -62,5 +61,16 @@ final class AbstractVersionTest extends TestCase
         $connection->method('getDatabasePlatform')->willReturn($platform);
 
         return new ConcreteAbstractVersion($connection, new NullLogger());
+    }
+
+    /**
+     * @return class-string<AbstractPlatform>
+     */
+    private function getMysqlPlatformClass(): string
+    {
+        // DBAL 3 uses MySQLPlatform; DBAL 2 uses MySqlPlatform
+        return class_exists('Doctrine\\DBAL\\Platforms\\MySQLPlatform')
+            ? 'Doctrine\\DBAL\\Platforms\\MySQLPlatform'
+            : 'Doctrine\\DBAL\\Platforms\\MySqlPlatform';
     }
 }
