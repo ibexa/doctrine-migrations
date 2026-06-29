@@ -58,7 +58,7 @@ final class AbstractMysqlVersionTest extends TestCase
 
         try {
             $migration->up($this->createMock(Schema::class));
-        } catch (SkipMigration) {
+        } catch (SkipMigration $e) {
         }
 
         self::assertFalse($migration->wasDoUpCalled());

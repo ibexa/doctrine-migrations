@@ -10,7 +10,7 @@
         </testsuite>
     </testsuites>
     <php>
-        <env name="SYMFONY_DEPRECATIONS_HELPER" value="weak"/>
+        <env name="SYMFONY_DEPRECATIONS_HELPER" value="disabled"/>
     </php>
     <listeners>
         <listener class="Symfony\Bridge\PhpUnit\SymfonyTestsListener"/>

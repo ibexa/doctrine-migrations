@@ -36,7 +36,6 @@ use Symfony\Contracts\Service\ServiceProviderInterface;
  */
 final class ServiceMigrationsRepository implements MigrationsRepository
 {
-    /** @var ServiceProviderInterface<AbstractMigration> */
     private ServiceProviderInterface $container;
 
     private ?MigrationsRepository $inner;
@@ -44,7 +43,6 @@ final class ServiceMigrationsRepository implements MigrationsRepository
     /** @var array<string, AvailableMigration> */
     private array $migrations = [];
 
-    /** @param ServiceProviderInterface<AbstractMigration> $container */
     public function __construct(
         ServiceProviderInterface $container,
         ?MigrationsRepository $inner = null
@@ -117,6 +115,11 @@ final class ServiceMigrationsRepository implements MigrationsRepository
             throw MigrationClassNotFound::new($id);
         }
 
-        $this->migrations[$id] = new AvailableMigration($version, $this->container->get($id));
+        $service = $this->container->get($id);
+        if (!$service instanceof AbstractMigration) {
+            throw new \LogicException(sprintf('Service "%s" must be an instance of %s.', $id, AbstractMigration::class));
+        }
+
+        $this->migrations[$id] = new AvailableMigration($version, $service);
     }
 }

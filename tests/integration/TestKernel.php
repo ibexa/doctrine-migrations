@@ -63,7 +63,7 @@ final class TestKernel extends Kernel
 
     public function getCacheDir(): string
     {
-        return sys_get_temp_dir() . '/ibexa_doctrine_migrations_test/cache/' . $this->environment;
+        return sys_get_temp_dir() . '/ibexa_doctrine_migrations_test/cache/' . $this->getEnvironment();
     }
 
     public function getLogDir(): string

@@ -8,7 +8,6 @@ declare(strict_types=1);
 
 namespace Ibexa\Bundle\DoctrineMigrations\Migrations\Postgres;
 
-use Doctrine\DBAL\Platforms\PostgreSQLPlatform;
 use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaMigrationInterface;
@@ -18,7 +17,7 @@ abstract class AbstractPostgresVersion extends AbstractMigration implements Ibex
     final public function up(Schema $schema): void
     {
         $this->skipIf(
-            !($this->connection->getDatabasePlatform() instanceof PostgreSQLPlatform),
+            !$this->isPostgresPlatform(),
             'This migration is PostgreSQL-specific.',
         );
 
@@ -28,11 +27,21 @@ abstract class AbstractPostgresVersion extends AbstractMigration implements Ibex
     final public function down(Schema $schema): void
     {
         $this->skipIf(
-            !($this->connection->getDatabasePlatform() instanceof PostgreSQLPlatform),
+            !$this->isPostgresPlatform(),
             'This migration is PostgreSQL-specific.',
         );
 
         $this->doDown($schema);
+    }
+
+    private function isPostgresPlatform(): bool
+    {
+        // DBAL 3 uses PostgreSQLPlatform; DBAL 2 uses PostgreSqlPlatform
+        $class = class_exists('Doctrine\\DBAL\\Platforms\\PostgreSQLPlatform')
+            ? 'Doctrine\\DBAL\\Platforms\\PostgreSQLPlatform'
+            : 'Doctrine\\DBAL\\Platforms\\PostgreSqlPlatform';
+
+        return $this->connection->getDatabasePlatform() instanceof $class;
     }
 
     abstract protected function doUp(Schema $schema): void;

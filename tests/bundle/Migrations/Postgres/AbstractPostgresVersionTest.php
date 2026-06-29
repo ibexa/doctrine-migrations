@@ -10,7 +10,6 @@ namespace Ibexa\Tests\Bundle\DoctrineMigrations\Migrations\Postgres;
 
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
-use Doctrine\DBAL\Platforms\PostgreSQLPlatform;
 use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\Exception\SkipMigration;
 use Ibexa\Tests\Bundle\DoctrineMigrations\Fixtures\ConcretePostgresVersion;
@@ -21,7 +20,7 @@ final class AbstractPostgresVersionTest extends TestCase
 {
     public function testUpCallsDoUpOnPostgreSQLPlatform(): void
     {
-        $migration = $this->buildMigration($this->createMock(PostgreSQLPlatform::class));
+        $migration = $this->buildMigration($this->createMock($this->getPostgresPlatformClass()));
 
         $migration->up($this->createMock(Schema::class));
 
@@ -38,7 +37,7 @@ final class AbstractPostgresVersionTest extends TestCase
 
     public function testDownCallsDoDownOnPostgreSQLPlatform(): void
     {
-        $migration = $this->buildMigration($this->createMock(PostgreSQLPlatform::class));
+        $migration = $this->buildMigration($this->createMock($this->getPostgresPlatformClass()));
 
         $migration->down($this->createMock(Schema::class));
 
@@ -59,7 +58,7 @@ final class AbstractPostgresVersionTest extends TestCase
 
         try {
             $migration->up($this->createMock(Schema::class));
-        } catch (SkipMigration) {
+        } catch (SkipMigration $e) {
         }
 
         self::assertFalse($migration->wasDoUpCalled());
@@ -71,5 +70,16 @@ final class AbstractPostgresVersionTest extends TestCase
         $connection->method('getDatabasePlatform')->willReturn($platform);
 
         return new ConcretePostgresVersion($connection, new NullLogger());
+    }
+
+    /**
+     * @return class-string<AbstractPlatform>
+     */
+    private function getPostgresPlatformClass(): string
+    {
+        // DBAL 3 uses PostgreSQLPlatform; DBAL 2 uses PostgreSqlPlatform
+        return class_exists('Doctrine\\DBAL\\Platforms\\PostgreSQLPlatform')
+            ? 'Doctrine\\DBAL\\Platforms\\PostgreSQLPlatform'
+            : 'Doctrine\\DBAL\\Platforms\\PostgreSqlPlatform';
     }
 }
