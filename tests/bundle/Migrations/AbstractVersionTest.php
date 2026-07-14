@@ -10,49 +10,67 @@ namespace Ibexa\Tests\Bundle\DoctrineMigrations\Migrations;
 
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
-use Doctrine\DBAL\Platforms\PostgreSQL100Platform;
 use Doctrine\DBAL\Schema\Schema;
-use Doctrine\Migrations\Exception\AbortMigration;
 use Ibexa\Tests\Bundle\DoctrineMigrations\Fixtures\ConcreteAbstractVersion;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 
 final class AbstractVersionTest extends TestCase
 {
-    public function testUpDispatchesToUpForMysqlOnMySQLPlatform(): void
+    public function testUpQueuesOnlyStatementsApplicableToMysql(): void
     {
         $migration = $this->buildMigration($this->createMock($this->getMysqlPlatformClass()));
 
         $migration->up($this->createMock(Schema::class));
 
-        self::assertTrue($migration->wasMysqlCalled());
-        self::assertFalse($migration->wasPostgresCalled());
+        self::assertSame(
+            ['SELECT 1 FROM common;', 'SELECT 1 FROM mysql_only;'],
+            $this->getQueuedStatements($migration),
+        );
     }
 
-    public function testUpDispatchesToUpForPostgresqlOnPostgresPlatform(): void
+    public function testUpQueuesOnlyStatementsApplicableToPostgresql(): void
     {
-        $migration = $this->buildMigration($this->createMock(PostgreSQL100Platform::class));
+        $migration = $this->buildMigration($this->createMock($this->getPostgresqlPlatformClass()));
 
         $migration->up($this->createMock(Schema::class));
 
-        self::assertFalse($migration->wasMysqlCalled());
-        self::assertTrue($migration->wasPostgresCalled());
+        self::assertSame(
+            ['SELECT 1 FROM common;', 'SELECT 1 FROM postgresql_only;'],
+            $this->getQueuedStatements($migration),
+        );
     }
 
-    public function testUpAbortsOnUnsupportedPlatform(): void
+    public function testUpQueuesOnlyStatementsApplicableToSqlite(): void
+    {
+        $migration = $this->buildMigration($this->createMock($this->getSqlitePlatformClass()));
+
+        $migration->up($this->createMock(Schema::class));
+
+        self::assertSame(
+            ['SELECT 1 FROM common;', 'SELECT 1 FROM sqlite_only;'],
+            $this->getQueuedStatements($migration),
+        );
+    }
+
+    public function testUpQueuesOnlyPlatformAgnosticStatementsOnUnsupportedPlatform(): void
     {
         $migration = $this->buildMigration($this->createMock(AbstractPlatform::class));
 
-        $this->expectException(AbortMigration::class);
         $migration->up($this->createMock(Schema::class));
+
+        self::assertSame(['SELECT 1 FROM common;'], $this->getQueuedStatements($migration));
     }
 
-    public function testEnsureDatabasePlatformAbortsOnUnsupportedPlatform(): void
+    /**
+     * @return list<string>
+     */
+    private function getQueuedStatements(ConcreteAbstractVersion $migration): array
     {
-        $migration = $this->buildMigration($this->createMock(AbstractPlatform::class));
-
-        $this->expectException(AbortMigration::class);
-        $migration->up($this->createMock(Schema::class));
+        return array_values(array_map(
+            static fn ($query): string => $query->getStatement(),
+            $migration->getSql(),
+        ));
     }
 
     private function buildMigration(AbstractPlatform $platform): ConcreteAbstractVersion
@@ -72,5 +90,27 @@ final class AbstractVersionTest extends TestCase
         return class_exists('Doctrine\\DBAL\\Platforms\\MySQLPlatform')
             ? 'Doctrine\\DBAL\\Platforms\\MySQLPlatform'
             : 'Doctrine\\DBAL\\Platforms\\MySqlPlatform';
+    }
+
+    /**
+     * @return class-string<AbstractPlatform>
+     */
+    private function getPostgresqlPlatformClass(): string
+    {
+        // DBAL 3 uses PostgreSQLPlatform; DBAL 2 uses PostgreSqlPlatform
+        return class_exists('Doctrine\\DBAL\\Platforms\\PostgreSQLPlatform')
+            ? 'Doctrine\\DBAL\\Platforms\\PostgreSQLPlatform'
+            : 'Doctrine\\DBAL\\Platforms\\PostgreSqlPlatform';
+    }
+
+    /**
+     * @return class-string<AbstractPlatform>
+     */
+    private function getSqlitePlatformClass(): string
+    {
+        // Later DBAL 3 releases use SQLitePlatform; earlier ones use SqlitePlatform
+        return class_exists('Doctrine\\DBAL\\Platforms\\SQLitePlatform')
+            ? 'Doctrine\\DBAL\\Platforms\\SQLitePlatform'
+            : 'Doctrine\\DBAL\\Platforms\\SqlitePlatform';
     }
 }

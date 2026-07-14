@@ -1,0 +1,82 @@
+<?php
+
+/**
+ * @copyright Copyright (C) Ibexa AS. All rights reserved.
+ * @license For full copyright and license information view LICENSE file distributed with this source code.
+ */
+declare(strict_types=1);
+
+namespace Ibexa\Tests\Bundle\DoctrineMigrations\Migrations;
+
+use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\AbstractPlatform;
+use Ibexa\Bundle\DoctrineMigrations\Migrations\DatabasePlatformResolver;
+use Ibexa\DoctrineMigrations\Migration\Yaml\SqlYamlPlatform;
+use PHPUnit\Framework\TestCase;
+
+final class DatabasePlatformResolverTest extends TestCase
+{
+    public function testResolveReturnsMysqlIdentifier(): void
+    {
+        self::assertSame(SqlYamlPlatform::MYSQL, DatabasePlatformResolver::resolve($this->buildConnection($this->getMysqlPlatformClass())));
+    }
+
+    public function testResolveReturnsPostgresqlIdentifier(): void
+    {
+        self::assertSame(SqlYamlPlatform::POSTGRESQL, DatabasePlatformResolver::resolve($this->buildConnection($this->getPostgresqlPlatformClass())));
+    }
+
+    public function testResolveReturnsSqliteIdentifier(): void
+    {
+        self::assertSame(SqlYamlPlatform::SQLITE, DatabasePlatformResolver::resolve($this->buildConnection($this->getSqlitePlatformClass())));
+    }
+
+    public function testResolveReturnsNullForUnsupportedPlatform(): void
+    {
+        self::assertNull(DatabasePlatformResolver::resolve($this->buildConnection(AbstractPlatform::class)));
+    }
+
+    /**
+     * @param class-string<AbstractPlatform> $platformClass
+     */
+    private function buildConnection(string $platformClass): Connection
+    {
+        $connection = $this->createMock(Connection::class);
+        $connection->method('getDatabasePlatform')->willReturn($this->createMock($platformClass));
+
+        return $connection;
+    }
+
+    /**
+     * @return class-string<AbstractPlatform>
+     */
+    private function getMysqlPlatformClass(): string
+    {
+        // DBAL 3 uses MySQLPlatform; DBAL 2 uses MySqlPlatform
+        return class_exists('Doctrine\\DBAL\\Platforms\\MySQLPlatform')
+            ? 'Doctrine\\DBAL\\Platforms\\MySQLPlatform'
+            : 'Doctrine\\DBAL\\Platforms\\MySqlPlatform';
+    }
+
+    /**
+     * @return class-string<AbstractPlatform>
+     */
+    private function getPostgresqlPlatformClass(): string
+    {
+        // DBAL 3 uses PostgreSQLPlatform; DBAL 2 uses PostgreSqlPlatform
+        return class_exists('Doctrine\\DBAL\\Platforms\\PostgreSQLPlatform')
+            ? 'Doctrine\\DBAL\\Platforms\\PostgreSQLPlatform'
+            : 'Doctrine\\DBAL\\Platforms\\PostgreSqlPlatform';
+    }
+
+    /**
+     * @return class-string<AbstractPlatform>
+     */
+    private function getSqlitePlatformClass(): string
+    {
+        // Later DBAL 3 releases use SQLitePlatform; earlier ones use SqlitePlatform
+        return class_exists('Doctrine\\DBAL\\Platforms\\SQLitePlatform')
+            ? 'Doctrine\\DBAL\\Platforms\\SQLitePlatform'
+            : 'Doctrine\\DBAL\\Platforms\\SqlitePlatform';
+    }
+}
