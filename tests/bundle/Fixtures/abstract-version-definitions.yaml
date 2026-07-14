@@ -1,0 +1,7 @@
+- sql: 'SELECT 1 FROM common;'
+- sql: 'SELECT 1 FROM mysql_only;'
+  platforms: 'mysql'
+- sql: 'SELECT 1 FROM postgresql_only;'
+  platforms: 'postgresql'
+- sql: 'SELECT 1 FROM sqlite_only;'
+  platforms: 'sqlite'

@@ -11,49 +11,69 @@ namespace Ibexa\Tests\Bundle\DoctrineMigrations\Migrations;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
 use Doctrine\DBAL\Platforms\MySQLPlatform;
-use Doctrine\DBAL\Platforms\PostgreSQL100Platform;
+use Doctrine\DBAL\Platforms\PostgreSQLPlatform;
+use Doctrine\DBAL\Platforms\SqlitePlatform;
 use Doctrine\DBAL\Schema\Schema;
-use Doctrine\Migrations\Exception\AbortMigration;
 use Ibexa\Tests\Bundle\DoctrineMigrations\Fixtures\ConcreteAbstractVersion;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 
 final class AbstractVersionTest extends TestCase
 {
-    public function testUpDispatchesToUpForMysqlOnMySQLPlatform(): void
+    public function testUpQueuesOnlyStatementsApplicableToMysql(): void
     {
         $migration = $this->buildMigration($this->createMock(MySQLPlatform::class));
 
         $migration->up($this->createMock(Schema::class));
 
-        self::assertTrue($migration->wasMysqlCalled());
-        self::assertFalse($migration->wasPostgresCalled());
+        self::assertSame(
+            ['SELECT 1 FROM common;', 'SELECT 1 FROM mysql_only;'],
+            $this->getQueuedStatements($migration),
+        );
     }
 
-    public function testUpDispatchesToUpForPostgresqlOnPostgresPlatform(): void
+    public function testUpQueuesOnlyStatementsApplicableToPostgresql(): void
     {
-        $migration = $this->buildMigration($this->createMock(PostgreSQL100Platform::class));
+        $migration = $this->buildMigration($this->createMock(PostgreSQLPlatform::class));
 
         $migration->up($this->createMock(Schema::class));
 
-        self::assertFalse($migration->wasMysqlCalled());
-        self::assertTrue($migration->wasPostgresCalled());
+        self::assertSame(
+            ['SELECT 1 FROM common;', 'SELECT 1 FROM postgresql_only;'],
+            $this->getQueuedStatements($migration),
+        );
     }
 
-    public function testUpAbortsOnUnsupportedPlatform(): void
+    public function testUpQueuesOnlyStatementsApplicableToSqlite(): void
+    {
+        $migration = $this->buildMigration($this->createMock(SqlitePlatform::class));
+
+        $migration->up($this->createMock(Schema::class));
+
+        self::assertSame(
+            ['SELECT 1 FROM common;', 'SELECT 1 FROM sqlite_only;'],
+            $this->getQueuedStatements($migration),
+        );
+    }
+
+    public function testUpQueuesOnlyPlatformAgnosticStatementsOnUnsupportedPlatform(): void
     {
         $migration = $this->buildMigration($this->createMock(AbstractPlatform::class));
 
-        $this->expectException(AbortMigration::class);
         $migration->up($this->createMock(Schema::class));
+
+        self::assertSame(['SELECT 1 FROM common;'], $this->getQueuedStatements($migration));
     }
 
-    public function testEnsureDatabasePlatformAbortsOnUnsupportedPlatform(): void
+    /**
+     * @return list<string>
+     */
+    private function getQueuedStatements(ConcreteAbstractVersion $migration): array
     {
-        $migration = $this->buildMigration($this->createMock(AbstractPlatform::class));
-
-        $this->expectException(AbortMigration::class);
-        $migration->up($this->createMock(Schema::class));
+        return array_values(array_map(
+            static fn ($query): string => $query->getStatement(),
+            $migration->getSql(),
+        ));
     }
 
     private function buildMigration(AbstractPlatform $platform): ConcreteAbstractVersion

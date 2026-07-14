@@ -1,0 +1,2 @@
+- file: 'sql/no_params.sql'
+  sql: 'SELECT 1;'
