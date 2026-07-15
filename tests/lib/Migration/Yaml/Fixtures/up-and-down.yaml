@@ -1,0 +1,4 @@
+up:
+    - sql: 'CREATE TABLE t (id INT);'
+down:
+    - sql: 'DROP TABLE t;'

@@ -8,6 +8,8 @@ declare(strict_types=1);
 
 namespace Ibexa\Bundle\DoctrineMigrations\Migrations;
 
+use Doctrine\Migrations\Exception\IrreversibleMigration;
+use Ibexa\DoctrineMigrations\Migration\Yaml\SqlYamlDefinition;
 use Ibexa\DoctrineMigrations\Migration\Yaml\SqlYamlDefinitionLoader;
 
 /**
@@ -34,16 +36,41 @@ trait YamlSqlFileMigrationTrait
     ): void;
 
     /**
-     * Loads the SQL statements declared in the given YAML file and queues them for
-     * execution via {@see addSql()}, once per declared parameter set, skipping any
-     * statement that doesn't apply to the current database platform.
+     * Loads the SQL statements declared in the "up" section of the given YAML file and
+     * queues them for execution via {@see addSql()}, once per declared parameter set,
+     * skipping any statement that doesn't apply to the current database platform.
      */
-    protected function addSqlFromYamlFile(string $yamlFilePath): void
+    protected function addUpSqlFromYamlFile(string $yamlFilePath): void
     {
-        $loader = new SqlYamlDefinitionLoader();
+        $this->addSqlFromYamlDefinitions((new SqlYamlDefinitionLoader())->load($yamlFilePath)->getUp());
+    }
+
+    /**
+     * Loads the SQL statements declared in the "down" section of the given YAML file and
+     * queues them for execution via {@see addSql()}, once per declared parameter set,
+     * skipping any statement that doesn't apply to the current database platform.
+     *
+     * @throws IrreversibleMigration if the YAML file declares no "down" statements
+     */
+    protected function addDownSqlFromYamlFile(string $yamlFilePath): void
+    {
+        $down = (new SqlYamlDefinitionLoader())->load($yamlFilePath)->getDown();
+
+        if ($down === []) {
+            $this->throwIrreversibleMigrationException(sprintf('YAML file "%s" declares no "down" statements.', $yamlFilePath));
+        }
+
+        $this->addSqlFromYamlDefinitions($down);
+    }
+
+    /**
+     * @param list<SqlYamlDefinition> $definitions
+     */
+    private function addSqlFromYamlDefinitions(array $definitions): void
+    {
         $platform = DatabasePlatformResolver::resolve($this->connection);
 
-        foreach ($loader->load($yamlFilePath) as $definition) {
+        foreach ($definitions as $definition) {
             if (!$definition->appliesToPlatform($platform)) {
                 continue;
             }

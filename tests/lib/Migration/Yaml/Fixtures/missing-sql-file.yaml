@@ -1,1 +1,2 @@
-- file: 'sql/does-not-exist.sql'
+up:
+    - file: 'sql/does-not-exist.sql'
