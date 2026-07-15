@@ -1,3 +1,2 @@
 up:
     - sql: 'SELECT 1;'
-      platforms: 42
