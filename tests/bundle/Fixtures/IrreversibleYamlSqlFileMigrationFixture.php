@@ -12,7 +12,7 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 use Ibexa\Bundle\DoctrineMigrations\Migrations\YamlSqlFileMigrationTrait;
 
-final class YamlSqlFileMigrationFixture extends AbstractMigration
+final class IrreversibleYamlSqlFileMigrationFixture extends AbstractMigration
 {
     use YamlSqlFileMigrationTrait;
 
@@ -23,6 +23,6 @@ final class YamlSqlFileMigrationFixture extends AbstractMigration
 
     public function down(Schema $schema): void
     {
-        $this->addDownSqlFromYamlFile(__DIR__ . '/../../lib/Migration/Yaml/Fixtures/up-and-down.yaml');
+        $this->addDownSqlFromYamlFile(__DIR__ . '/../../lib/Migration/Yaml/Fixtures/definitions.yaml');
     }
 }

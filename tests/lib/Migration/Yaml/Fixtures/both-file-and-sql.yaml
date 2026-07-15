@@ -1,2 +1,3 @@
-- file: 'sql/no_params.sql'
-  sql: 'SELECT 1;'
+up:
+    - file: 'sql/no_params.sql'
+      sql: 'SELECT 1;'

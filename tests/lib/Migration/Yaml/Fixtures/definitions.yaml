@@ -1,16 +1,17 @@
-- file: 'sql/no_params.sql'
-- file: 'sql/single_params.sql'
-  parameters:
-      name: 'my_setting'
-      value: '42'
-- file: 'sql/multi_params.sql'
-  parameters:
-      - { name: 'setting_a', value: '1' }
-      - { name: 'setting_b', value: '2' }
-- file: 'sql/positional_params.sql'
-  parameters:
-      - 1
-      - 2
-- sql: 'DELETE FROM setting WHERE name = :name'
-  parameters:
-      name: 'obsolete_setting'
+up:
+    - file: 'sql/no_params.sql'
+    - file: 'sql/single_params.sql'
+      parameters:
+          name: 'my_setting'
+          value: '42'
+    - file: 'sql/multi_params.sql'
+      parameters:
+          - { name: 'setting_a', value: '1' }
+          - { name: 'setting_b', value: '2' }
+    - file: 'sql/positional_params.sql'
+      parameters:
+          - 1
+          - 2
+    - sql: 'DELETE FROM setting WHERE name = :name'
+      parameters:
+          name: 'obsolete_setting'

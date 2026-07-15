@@ -16,23 +16,25 @@ final class SqlYamlDefinitionLoaderTest extends TestCase
 {
     private const FIXTURES_DIR = __DIR__ . '/Fixtures';
 
-    public function testLoadReturnsOneDefinitionPerEntryWithNormalizedParameterSets(): void
+    public function testLoadReturnsOneUpDefinitionPerEntryWithNormalizedParameterSets(): void
     {
         $loader = new SqlYamlDefinitionLoader();
 
         $definitions = $loader->load(self::FIXTURES_DIR . '/definitions.yaml');
 
-        self::assertCount(5, $definitions);
+        $up = $definitions->getUp();
+        self::assertCount(5, $up);
+        self::assertSame([], $definitions->getDown());
 
         // No `parameters` declared: SQL is queued once, with no parameters.
-        self::assertSame('SELECT 1;', $definitions[0]->getSql());
-        self::assertSame([[]], $definitions[0]->getParameterSets());
+        self::assertSame('SELECT 1;', $up[0]->getSql());
+        self::assertSame([[]], $up[0]->getParameterSets());
 
         // A single, flat parameter set: SQL is queued once with that set.
-        self::assertStringContainsString('INSERT INTO setting', $definitions[1]->getSql());
+        self::assertStringContainsString('INSERT INTO setting', $up[1]->getSql());
         self::assertSame(
             [['name' => 'my_setting', 'value' => '42']],
-            $definitions[1]->getParameterSets(),
+            $up[1]->getParameterSets(),
         );
 
         // A list of parameter sets: SQL is queued once per set.
@@ -41,38 +43,61 @@ final class SqlYamlDefinitionLoaderTest extends TestCase
                 ['name' => 'setting_a', 'value' => '1'],
                 ['name' => 'setting_b', 'value' => '2'],
             ],
-            $definitions[2]->getParameterSets(),
+            $up[2]->getParameterSets(),
         );
 
         // A flat list of positional (scalar) values is treated as a single parameter set.
-        self::assertSame([[1, 2]], $definitions[3]->getParameterSets());
+        self::assertSame([[1, 2]], $up[3]->getParameterSets());
 
         // Inline `sql` (instead of `file`): SQL is taken directly from the YAML file.
-        self::assertSame('DELETE FROM setting WHERE name = :name', $definitions[4]->getSql());
-        self::assertSame([['name' => 'obsolete_setting']], $definitions[4]->getParameterSets());
+        self::assertSame('DELETE FROM setting WHERE name = :name', $up[4]->getSql());
+        self::assertSame([['name' => 'obsolete_setting']], $up[4]->getParameterSets());
 
         // No `platforms` declared on any entry: applies to all platforms.
-        foreach ($definitions as $definition) {
+        foreach ($up as $definition) {
             self::assertSame([], $definition->getPlatforms());
         }
+    }
+
+    public function testLoadParsesUpAndDownSectionsIndependently(): void
+    {
+        $loader = new SqlYamlDefinitionLoader();
+
+        $definitions = $loader->load(self::FIXTURES_DIR . '/up-and-down.yaml');
+
+        self::assertCount(1, $definitions->getUp());
+        self::assertSame('CREATE TABLE t (id INT);', $definitions->getUp()[0]->getSql());
+
+        self::assertCount(1, $definitions->getDown());
+        self::assertSame('DROP TABLE t;', $definitions->getDown()[0]->getSql());
+    }
+
+    public function testLoadTreatsMissingUpSectionAsNoUpDefinitions(): void
+    {
+        $loader = new SqlYamlDefinitionLoader();
+
+        $definitions = $loader->load(self::FIXTURES_DIR . '/down-only.yaml');
+
+        self::assertSame([], $definitions->getUp());
+        self::assertCount(1, $definitions->getDown());
     }
 
     public function testLoadNormalizesPlatformsToAList(): void
     {
         $loader = new SqlYamlDefinitionLoader();
 
-        $definitions = $loader->load(self::FIXTURES_DIR . '/platforms.yaml');
+        $up = $loader->load(self::FIXTURES_DIR . '/platforms.yaml')->getUp();
 
-        self::assertCount(3, $definitions);
+        self::assertCount(3, $up);
 
         // No `platforms` declared: applies to all platforms.
-        self::assertSame([], $definitions[0]->getPlatforms());
+        self::assertSame([], $up[0]->getPlatforms());
 
         // A single platform string is normalized to a one-element list.
-        self::assertSame([SqlYamlPlatform::MYSQL], $definitions[1]->getPlatforms());
+        self::assertSame([SqlYamlPlatform::MYSQL], $up[1]->getPlatforms());
 
         // A list of platforms is kept as-is.
-        self::assertSame([SqlYamlPlatform::MYSQL, SqlYamlPlatform::POSTGRESQL], $definitions[2]->getPlatforms());
+        self::assertSame([SqlYamlPlatform::MYSQL, SqlYamlPlatform::POSTGRESQL], $up[2]->getPlatforms());
     }
 
     public function testLoadThrowsWhenPlatformNameIsUnrecognized(): void
@@ -99,7 +124,10 @@ final class SqlYamlDefinitionLoaderTest extends TestCase
     {
         $loader = new SqlYamlDefinitionLoader();
 
-        self::assertSame([], $loader->load(self::FIXTURES_DIR . '/empty.yaml'));
+        $definitions = $loader->load(self::FIXTURES_DIR . '/empty.yaml');
+
+        self::assertSame([], $definitions->getUp());
+        self::assertSame([], $definitions->getDown());
     }
 
     public function testLoadThrowsWhenYamlFileDoesNotExist(): void
@@ -112,13 +140,24 @@ final class SqlYamlDefinitionLoaderTest extends TestCase
         $loader->load(self::FIXTURES_DIR . '/does-not-exist.yaml');
     }
 
-    public function testLoadThrowsWhenYamlFileIsNotAList(): void
+    public function testLoadThrowsWhenDocumentIsNotAMapping(): void
     {
         $loader = new SqlYamlDefinitionLoader();
 
         $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessageMatches('/must contain a mapping with an "up" and\/or a "down" key/');
 
-        $loader->load(self::FIXTURES_DIR . '/not-a-list.yaml');
+        $loader->load(self::FIXTURES_DIR . '/not-a-mapping.yaml');
+    }
+
+    public function testLoadThrowsWhenUpSectionIsNotAList(): void
+    {
+        $loader = new SqlYamlDefinitionLoader();
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessageMatches('/"up".*must be a list of entries/');
+
+        $loader->load(self::FIXTURES_DIR . '/up-not-a-list.yaml');
     }
 
     public function testLoadThrowsWhenEntryDeclaresNeitherFileNorSql(): void

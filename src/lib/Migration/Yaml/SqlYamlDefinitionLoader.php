@@ -11,9 +11,11 @@ namespace Ibexa\DoctrineMigrations\Migration\Yaml;
 use Symfony\Component\Yaml\Yaml;
 
 /**
- * Loads a list of {@see SqlYamlDefinition} from a YAML file.
+ * Loads {@see SqlYamlDefinitions} from a YAML file.
  *
- * The YAML file must contain a list of entries, each declaring exactly one of:
+ * The YAML file must contain a mapping with an `up` and/or a `down` key, each a list of
+ * entries (omitting either means it declares no statements for that direction). Each entry
+ * declares exactly one of:
  *  - `file`: the path to a SQL file, resolved relative to the directory of the YAML file;
  *  - `sql`: an inline SQL statement, declared directly in the YAML file.
  *
@@ -29,47 +31,75 @@ use Symfony\Component\Yaml\Yaml;
  * Example:
  *
  * ```yaml
- * - file: 'sql/create_indexes.sql'
- * - sql: 'DELETE FROM setting WHERE name = :name'
- *   parameters:
- *       name: 'obsolete_setting'
- * - file: 'sql/mysql/insert_setting.sql'
- *   platforms: 'mysql'
- *   parameters:
- *       name: 'my_setting'
- *       value: '42'
- * - file: 'sql/insert_multiple_settings.sql'
- *   platforms: ['mysql', 'postgresql']
- *   parameters:
- *       - { name: 'setting_a', value: '1' }
- *       - { name: 'setting_b', value: '2' }
+ * up:
+ *     - file: 'sql/create_indexes.sql'
+ *     - sql: 'DELETE FROM setting WHERE name = :name'
+ *       parameters:
+ *           name: 'obsolete_setting'
+ *     - file: 'sql/mysql/insert_setting.sql'
+ *       platforms: 'mysql'
+ *       parameters:
+ *           name: 'my_setting'
+ *           value: '42'
+ *     - file: 'sql/insert_multiple_settings.sql'
+ *       platforms: ['mysql', 'postgresql']
+ *       parameters:
+ *           - { name: 'setting_a', value: '1' }
+ *           - { name: 'setting_b', value: '2' }
+ * down:
+ *     - file: 'sql/drop_indexes.sql'
+ *     - sql: 'DELETE FROM setting WHERE name = :name'
+ *       parameters:
+ *           name: 'my_setting'
  * ```
  */
 final class SqlYamlDefinitionLoader
 {
-    /**
-     * @return list<SqlYamlDefinition>
-     */
-    public function load(string $yamlFilePath): array
+    private const SECTION_UP = 'up';
+
+    private const SECTION_DOWN = 'down';
+
+    public function load(string $yamlFilePath): SqlYamlDefinitions
     {
         if (!is_file($yamlFilePath)) {
             throw new \RuntimeException(sprintf('YAML SQL migration definition file "%s" does not exist.', $yamlFilePath));
         }
 
-        $entries = Yaml::parseFile($yamlFilePath);
-        if ($entries === null) {
-            $entries = [];
+        $document = Yaml::parseFile($yamlFilePath);
+        if ($document === null) {
+            $document = [];
         }
 
-        if (!is_array($entries)) {
-            throw new \RuntimeException(sprintf('YAML SQL migration definition file "%s" must contain a list of entries.', $yamlFilePath));
+        if (!is_array($document) || ($document !== [] && array_is_list($document))) {
+            throw new \RuntimeException(sprintf('YAML SQL migration definition file "%s" must contain a mapping with an "up" and/or a "down" key.', $yamlFilePath));
         }
 
         $baseDirectory = dirname($yamlFilePath);
 
+        return new SqlYamlDefinitions(
+            $this->parseSection($document[self::SECTION_UP] ?? [], self::SECTION_UP, $yamlFilePath, $baseDirectory),
+            $this->parseSection($document[self::SECTION_DOWN] ?? [], self::SECTION_DOWN, $yamlFilePath, $baseDirectory),
+        );
+    }
+
+    /**
+     * @param mixed $entries
+     *
+     * @return list<SqlYamlDefinition>
+     */
+    private function parseSection(
+        $entries,
+        string $section,
+        string $yamlFilePath,
+        string $baseDirectory
+    ): array {
+        if (!is_array($entries)) {
+            throw new \RuntimeException(sprintf('"%s" in "%s" must be a list of entries.', $section, $yamlFilePath));
+        }
+
         $definitions = [];
         foreach ($entries as $index => $entry) {
-            $definitions[] = $this->parseEntry($entry, $index, $yamlFilePath, $baseDirectory);
+            $definitions[] = $this->parseEntry($entry, sprintf('%s[%s]', $section, $index), $yamlFilePath, $baseDirectory);
         }
 
         return $definitions;
@@ -77,16 +107,15 @@ final class SqlYamlDefinitionLoader
 
     /**
      * @param mixed $entry
-     * @param int|string $index
      */
     private function parseEntry(
         $entry,
-        $index,
+        string $entryLabel,
         string $yamlFilePath,
         string $baseDirectory
     ): SqlYamlDefinition {
         if (!is_array($entry)) {
-            throw new \RuntimeException(sprintf('Entry "%s" in "%s" must be a mapping.', $index, $yamlFilePath));
+            throw new \RuntimeException(sprintf('Entry "%s" in "%s" must be a mapping.', $entryLabel, $yamlFilePath));
         }
 
         $file = $entry['file'] ?? null;
@@ -96,36 +125,33 @@ final class SqlYamlDefinitionLoader
         $hasSql = is_string($inlineSql) && $inlineSql !== '';
 
         if ($hasFile === $hasSql) {
-            throw new \RuntimeException(sprintf('Entry "%s" in "%s" must declare exactly one of a non-empty "file" or "sql" string.', $index, $yamlFilePath));
+            throw new \RuntimeException(sprintf('Entry "%s" in "%s" must declare exactly one of a non-empty "file" or "sql" string.', $entryLabel, $yamlFilePath));
         }
 
         if (is_string($file) && $hasFile) {
-            $sql = $this->readSqlFile($file, $index, $yamlFilePath, $baseDirectory);
+            $sql = $this->readSqlFile($file, $entryLabel, $yamlFilePath, $baseDirectory);
         } elseif (is_string($inlineSql) && $hasSql) {
             $sql = $inlineSql;
         } else {
-            throw new \RuntimeException(sprintf('Entry "%s" in "%s" must declare exactly one of a non-empty "file" or "sql" string.', $index, $yamlFilePath));
+            throw new \RuntimeException(sprintf('Entry "%s" in "%s" must declare exactly one of a non-empty "file" or "sql" string.', $entryLabel, $yamlFilePath));
         }
 
         return new SqlYamlDefinition(
             rtrim($sql),
-            $this->normalizeParameterSets($entry['parameters'] ?? null, $index, $yamlFilePath),
-            $this->normalizePlatforms($entry['platforms'] ?? null, $index, $yamlFilePath),
+            $this->normalizeParameterSets($entry['parameters'] ?? null, $entryLabel, $yamlFilePath),
+            $this->normalizePlatforms($entry['platforms'] ?? null, $entryLabel, $yamlFilePath),
         );
     }
 
-    /**
-     * @param int|string $index
-     */
     private function readSqlFile(
         string $file,
-        $index,
+        string $entryLabel,
         string $yamlFilePath,
         string $baseDirectory
     ): string {
         $sqlFilePath = $baseDirectory . '/' . $file;
         if (!is_file($sqlFilePath)) {
-            throw new \RuntimeException(sprintf('SQL file "%s" declared in entry "%s" in "%s" does not exist.', $sqlFilePath, $index, $yamlFilePath));
+            throw new \RuntimeException(sprintf('SQL file "%s" declared in entry "%s" in "%s" does not exist.', $sqlFilePath, $entryLabel, $yamlFilePath));
         }
 
         $sql = file_get_contents($sqlFilePath);
@@ -138,13 +164,12 @@ final class SqlYamlDefinitionLoader
 
     /**
      * @param mixed $parameters
-     * @param int|string $index
      *
      * @return list<array<int|string, mixed>>
      */
     private function normalizeParameterSets(
         $parameters,
-        $index,
+        string $entryLabel,
         string $yamlFilePath
     ): array {
         if ($parameters === null) {
@@ -152,7 +177,7 @@ final class SqlYamlDefinitionLoader
         }
 
         if (!is_array($parameters)) {
-            throw new \RuntimeException(sprintf('"parameters" for entry "%s" in "%s" must be an array.', $index, $yamlFilePath));
+            throw new \RuntimeException(sprintf('"parameters" for entry "%s" in "%s" must be an array.', $entryLabel, $yamlFilePath));
         }
 
         if ($parameters === [] || !$this->isListOfParameterSets($parameters)) {
@@ -187,13 +212,12 @@ final class SqlYamlDefinitionLoader
 
     /**
      * @param mixed $platforms
-     * @param int|string $index
      *
      * @return list<string>
      */
     private function normalizePlatforms(
         $platforms,
-        $index,
+        string $entryLabel,
         string $yamlFilePath
     ): array {
         if ($platforms === null) {
@@ -205,7 +229,7 @@ final class SqlYamlDefinitionLoader
         }
 
         if (!is_array($platforms)) {
-            throw new \RuntimeException(sprintf('"platforms" for entry "%s" in "%s" must be a string or a list of strings.', $index, $yamlFilePath));
+            throw new \RuntimeException(sprintf('"platforms" for entry "%s" in "%s" must be a string or a list of strings.', $entryLabel, $yamlFilePath));
         }
 
         $normalized = [];
@@ -213,7 +237,7 @@ final class SqlYamlDefinitionLoader
             if (!is_string($platform) || !in_array($platform, SqlYamlPlatform::all(), true)) {
                 throw new \RuntimeException(sprintf(
                     '"platforms" for entry "%s" in "%s" must only contain one of "%s".',
-                    $index,
+                    $entryLabel,
                     $yamlFilePath,
                     implode('", "', SqlYamlPlatform::all()),
                 ));
