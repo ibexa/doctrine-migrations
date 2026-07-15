@@ -10,7 +10,7 @@ namespace Ibexa\Tests\Bundle\DoctrineMigrations\Fixtures;
 
 use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
-use Ibexa\Bundle\DoctrineMigrations\Migrations\YamlSqlFileMigrationTrait;
+use Ibexa\Contracts\DoctrineMigrations\Migrations\YamlSqlFileMigrationTrait;
 
 final class IrreversibleYamlSqlFileMigrationFixture extends AbstractMigration
 {

@@ -11,7 +11,6 @@ namespace Ibexa\Contracts\DoctrineMigrations\Migrations;
 use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 use Doctrine\Migrations\Exception\IrreversibleMigration;
-use Ibexa\Bundle\DoctrineMigrations\Migrations\YamlSqlFileMigrationTrait;
 
 /**
  * Base class for Ibexa migrations whose SQL is fully declared in a single YAML file,
@@ -26,12 +25,12 @@ abstract class AbstractVersion extends AbstractMigration
 {
     use YamlSqlFileMigrationTrait;
 
-    final public function up(Schema $schema): void
+    public function up(Schema $schema): void
     {
         $this->addUpSqlFromYamlFile($this->getYamlFilePath());
     }
 
-    final public function down(Schema $schema): void
+    public function down(Schema $schema): void
     {
         $this->addDownSqlFromYamlFile($this->getYamlFilePath());
     }
