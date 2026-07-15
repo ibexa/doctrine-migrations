@@ -6,9 +6,10 @@
  */
 declare(strict_types=1);
 
-namespace Ibexa\Bundle\DoctrineMigrations\Migrations;
+namespace Ibexa\Contracts\DoctrineMigrations\Migrations;
 
 use Doctrine\Migrations\Exception\IrreversibleMigration;
+use Ibexa\Bundle\DoctrineMigrations\Migrations\DatabasePlatformResolver;
 use Ibexa\DoctrineMigrations\Migration\Yaml\SqlYamlDefinition;
 use Ibexa\DoctrineMigrations\Migration\Yaml\SqlYamlDefinitionLoader;
 
