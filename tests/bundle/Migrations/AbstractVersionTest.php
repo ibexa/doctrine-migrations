@@ -11,7 +11,9 @@ namespace Ibexa\Tests\Bundle\DoctrineMigrations\Migrations;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
 use Doctrine\DBAL\Schema\Schema;
+use Doctrine\Migrations\Exception\IrreversibleMigration;
 use Ibexa\Tests\Bundle\DoctrineMigrations\Fixtures\ConcreteAbstractVersion;
+use Ibexa\Tests\Bundle\DoctrineMigrations\Fixtures\IrreversibleAbstractVersion;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 
@@ -60,6 +62,36 @@ final class AbstractVersionTest extends TestCase
         $migration->up($this->createMock(Schema::class));
 
         self::assertSame(['SELECT 1 FROM common;'], $this->getQueuedStatements($migration));
+    }
+
+    public function testDownQueuesOnlyStatementsApplicableToMysql(): void
+    {
+        $migration = $this->buildMigration($this->createMock($this->getMysqlPlatformClass()));
+
+        $migration->down($this->createMock(Schema::class));
+
+        self::assertSame(
+            ['SELECT 2 FROM common;', 'SELECT 2 FROM mysql_only;'],
+            $this->getQueuedStatements($migration),
+        );
+    }
+
+    public function testDownQueuesOnlyPlatformAgnosticStatementsOnUnsupportedPlatform(): void
+    {
+        $migration = $this->buildMigration($this->createMock(AbstractPlatform::class));
+
+        $migration->down($this->createMock(Schema::class));
+
+        self::assertSame(['SELECT 2 FROM common;'], $this->getQueuedStatements($migration));
+    }
+
+    public function testDownThrowsIrreversibleMigrationExceptionWhenYamlDeclaresNoDownSection(): void
+    {
+        $migration = new IrreversibleAbstractVersion($this->createMock(Connection::class), new NullLogger());
+
+        $this->expectException(IrreversibleMigration::class);
+
+        $migration->down($this->createMock(Schema::class));
     }
 
     /**

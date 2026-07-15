@@ -10,11 +10,16 @@ namespace Ibexa\Bundle\DoctrineMigrations\Migrations;
 
 use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
+use Doctrine\Migrations\Exception\IrreversibleMigration;
 
 /**
  * Base class for Ibexa migrations whose SQL is fully declared in a single YAML file,
- * covering all supported database platforms (see {@see YamlSqlFileMigrationTrait}),
- * instead of requiring a separate PHP implementation per platform.
+ * covering all supported database platforms and both the "up" and "down" directions
+ * (see {@see YamlSqlFileMigrationTrait}), instead of requiring a separate PHP
+ * implementation per platform.
+ *
+ * If the YAML file declares no "down" section, {@see down()} throws an
+ * {@see IrreversibleMigration} exception.
  */
 abstract class AbstractVersion extends AbstractMigration
 {
@@ -22,7 +27,12 @@ abstract class AbstractVersion extends AbstractMigration
 
     final public function up(Schema $schema): void
     {
-        $this->addSqlFromYamlFile($this->getYamlFilePath());
+        $this->addUpSqlFromYamlFile($this->getYamlFilePath());
+    }
+
+    final public function down(Schema $schema): void
+    {
+        $this->addDownSqlFromYamlFile($this->getYamlFilePath());
     }
 
     /**
