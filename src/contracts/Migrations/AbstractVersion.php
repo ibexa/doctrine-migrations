@@ -6,11 +6,12 @@
  */
 declare(strict_types=1);
 
-namespace Ibexa\Bundle\DoctrineMigrations\Migrations;
+namespace Ibexa\Contracts\DoctrineMigrations\Migrations;
 
 use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 use Doctrine\Migrations\Exception\IrreversibleMigration;
+use Ibexa\Bundle\DoctrineMigrations\Migrations\YamlSqlFileMigrationTrait;
 
 /**
  * Base class for Ibexa migrations whose SQL is fully declared in a single YAML file,

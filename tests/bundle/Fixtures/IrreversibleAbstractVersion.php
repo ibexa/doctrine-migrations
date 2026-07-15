@@ -8,7 +8,7 @@ declare(strict_types=1);
 
 namespace Ibexa\Tests\Bundle\DoctrineMigrations\Fixtures;
 
-use Ibexa\Bundle\DoctrineMigrations\Migrations\AbstractVersion;
+use Ibexa\Contracts\DoctrineMigrations\Migrations\AbstractVersion;
 
 final class IrreversibleAbstractVersion extends AbstractVersion
 {
