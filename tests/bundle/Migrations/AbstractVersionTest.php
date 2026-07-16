@@ -118,10 +118,10 @@ final class AbstractVersionTest extends TestCase
      */
     private function getMysqlPlatformClass(): string
     {
-        // DBAL 3 uses MySQLPlatform; DBAL 2 uses MySqlPlatform
-        return class_exists('Doctrine\\DBAL\\Platforms\\MySQLPlatform')
-            ? 'Doctrine\\DBAL\\Platforms\\MySQLPlatform'
-            : 'Doctrine\\DBAL\\Platforms\\MySqlPlatform';
+        // DBAL 2 uses MySqlPlatform; DBAL 3 renamed it to MySQLPlatform
+        return class_exists('Doctrine\\DBAL\\Platforms\\MySqlPlatform')
+            ? 'Doctrine\\DBAL\\Platforms\\MySqlPlatform'
+            : 'Doctrine\\DBAL\\Platforms\\MySQLPlatform';
     }
 
     /**
@@ -129,10 +129,10 @@ final class AbstractVersionTest extends TestCase
      */
     private function getPostgresqlPlatformClass(): string
     {
-        // DBAL 3 uses PostgreSQLPlatform; DBAL 2 uses PostgreSqlPlatform
-        return class_exists('Doctrine\\DBAL\\Platforms\\PostgreSQLPlatform')
-            ? 'Doctrine\\DBAL\\Platforms\\PostgreSQLPlatform'
-            : 'Doctrine\\DBAL\\Platforms\\PostgreSqlPlatform';
+        // DBAL 2 uses PostgreSqlPlatform; DBAL 3 renamed it to PostgreSQLPlatform
+        return class_exists('Doctrine\\DBAL\\Platforms\\PostgreSqlPlatform')
+            ? 'Doctrine\\DBAL\\Platforms\\PostgreSqlPlatform'
+            : 'Doctrine\\DBAL\\Platforms\\PostgreSQLPlatform';
     }
 
     /**
@@ -140,9 +140,9 @@ final class AbstractVersionTest extends TestCase
      */
     private function getSqlitePlatformClass(): string
     {
-        // Later DBAL 3 releases use SQLitePlatform; earlier ones use SqlitePlatform
-        return class_exists('Doctrine\\DBAL\\Platforms\\SQLitePlatform')
-            ? 'Doctrine\\DBAL\\Platforms\\SQLitePlatform'
-            : 'Doctrine\\DBAL\\Platforms\\SqlitePlatform';
+        // Earlier DBAL releases use SqlitePlatform; later DBAL 3 releases renamed it to SQLitePlatform
+        return class_exists('Doctrine\\DBAL\\Platforms\\SqlitePlatform')
+            ? 'Doctrine\\DBAL\\Platforms\\SqlitePlatform'
+            : 'Doctrine\\DBAL\\Platforms\\SQLitePlatform';
     }
 }
