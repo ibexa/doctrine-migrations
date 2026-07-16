@@ -14,6 +14,7 @@ use Doctrine\Migrations\MigrationsRepository;
 use Doctrine\Migrations\Version\Comparator;
 use Ibexa\Bundle\DoctrineMigrations\Comparator\IbexaMigrationComparator;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaMigrationTag;
+use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaOnlyDependencyFactory;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaOnlyMigrationsRepository;
 use Ibexa\DoctrineMigrations\Migration\ServiceMigrationsRepository;
 use Psr\Log\LoggerInterface;
@@ -22,6 +23,7 @@ use Symfony\Component\DependencyInjection\Argument\ServiceClosureArgument;
 use Symfony\Component\DependencyInjection\Argument\ServiceLocatorArgument;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\DependencyInjection\TypedReference;
 
@@ -47,6 +49,11 @@ use Symfony\Component\DependencyInjection\TypedReference;
  * The same tagged migrations are also wired into the {@see IbexaOnlyMigrationsRepository::SERVICE_ID}
  * service — a second, separate {@see ServiceMigrationsRepository} instance that never decorates an
  * inner repository, for callers that explicitly need only Ibexa-internal migrations.
+ *
+ * Finally, the {@see IbexaOnlyDependencyFactory::SERVICE_ID} service — an independent copy of this
+ * DependencyFactory that always runs against the "ibexa.persistence.connection" service (assumed
+ * to exist; it's created by ibexa/core) and uses that Ibexa-only repository — is wired to this
+ * same "doctrine.migrations.dependency_factory" service as its source of Configuration/logger.
  */
 final class RegisterMigrationsPass implements CompilerPassInterface
 {
@@ -88,6 +95,27 @@ final class RegisterMigrationsPass implements CompilerPassInterface
             $repositoryDefinition->replaceArgument(1, new Reference('doctrine.migrations.service_migrations_repository'));
         } else {
             $repositoryDefinition->replaceArgument(1, null);
+        }
+
+        // Independent copy of this DependencyFactory, always using the Ibexa-only repository
+        // (its "ibexa.persistence.connection" argument is wired directly in services.php). Its
+        // Configuration and logger are fetched from this DependencyFactory via two inline
+        // definitions in services.php, each with an abstract_arg placeholder standing in for it.
+        if ($container->hasDefinition(IbexaOnlyDependencyFactory::SERVICE_ID)) {
+            $ibexaOnlyDependencyFactoryDefinition = $container->getDefinition(IbexaOnlyDependencyFactory::SERVICE_ID);
+
+            $existingConfigurationDefinition = $ibexaOnlyDependencyFactoryDefinition->getArgument(0);
+            if ($existingConfigurationDefinition instanceof Definition) {
+                $configurationDefinition = $existingConfigurationDefinition->getArgument(0);
+                if ($configurationDefinition instanceof Definition) {
+                    $configurationDefinition->setFactory([new Reference('doctrine.migrations.dependency_factory'), 'getConfiguration']);
+                }
+            }
+
+            $loggerDefinition = $ibexaOnlyDependencyFactoryDefinition->getArgument(2);
+            if ($loggerDefinition instanceof Definition) {
+                $loggerDefinition->setFactory([new Reference('doctrine.migrations.dependency_factory'), 'getLogger']);
+            }
         }
 
         $dependencyFactory = $container->getDefinition('doctrine.migrations.dependency_factory');

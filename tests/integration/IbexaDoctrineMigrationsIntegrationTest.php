@@ -8,8 +8,10 @@ declare(strict_types=1);
 
 namespace Ibexa\Tests\Integration\DoctrineMigrations;
 
+use Doctrine\Migrations\DependencyFactory;
 use Doctrine\Migrations\Version\Version;
 use Ibexa\Bundle\DoctrineMigrations\Comparator\IbexaMigrationComparator;
+use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaOnlyDependencyFactory;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaOnlyMigrationsRepository;
 use Ibexa\DoctrineMigrations\Migration\ServiceMigrationsRepository;
 use Ibexa\Tests\Integration\DoctrineMigrations\Fixtures\IntegrationTestMigration;
@@ -55,6 +57,52 @@ final class IbexaDoctrineMigrationsIntegrationTest extends KernelTestCase
 
         self::assertCount(1, $items);
         self::assertSame(IntegrationTestMigration::class, (string) $items[0]->getVersion());
+    }
+
+    public function testIbexaOnlyDependencyFactoryIsAvailableInContainer(): void
+    {
+        self::assertInstanceOf(
+            DependencyFactory::class,
+            self::getContainer()->get('test.' . IbexaOnlyDependencyFactory::SERVICE_ID),
+        );
+    }
+
+    public function testIbexaOnlyDependencyFactoryUsesTheIbexaOnlyRepository(): void
+    {
+        $dependencyFactory = self::getContainer()->get('test.' . IbexaOnlyDependencyFactory::SERVICE_ID);
+        self::assertInstanceOf(DependencyFactory::class, $dependencyFactory);
+
+        self::assertTrue($dependencyFactory->getMigrationRepository()->hasMigration(IntegrationTestMigration::class));
+    }
+
+    public function testIbexaOnlyDependencyFactoryIsIndependentFromTheApplicationOne(): void
+    {
+        $applicationDependencyFactory = self::getContainer()->get('doctrine.migrations.dependency_factory');
+        self::assertInstanceOf(DependencyFactory::class, $applicationDependencyFactory);
+
+        $ibexaOnlyDependencyFactory = self::getContainer()->get('test.' . IbexaOnlyDependencyFactory::SERVICE_ID);
+        self::assertInstanceOf(DependencyFactory::class, $ibexaOnlyDependencyFactory);
+
+        self::assertNotSame($applicationDependencyFactory, $ibexaOnlyDependencyFactory);
+        self::assertNotSame(
+            $applicationDependencyFactory->getMigrationRepository(),
+            $ibexaOnlyDependencyFactory->getMigrationRepository(),
+        );
+    }
+
+    public function testIbexaOnlyDependencyFactoryUsesTheIbexaPersistenceConnection(): void
+    {
+        $applicationDependencyFactory = self::getContainer()->get('doctrine.migrations.dependency_factory');
+        self::assertInstanceOf(DependencyFactory::class, $applicationDependencyFactory);
+
+        $ibexaOnlyDependencyFactory = self::getContainer()->get('test.' . IbexaOnlyDependencyFactory::SERVICE_ID);
+        self::assertInstanceOf(DependencyFactory::class, $ibexaOnlyDependencyFactory);
+
+        self::assertSame(
+            self::getContainer()->get('ibexa.persistence.connection'),
+            $ibexaOnlyDependencyFactory->getConnection(),
+        );
+        self::assertNotSame($applicationDependencyFactory->getConnection(), $ibexaOnlyDependencyFactory->getConnection());
     }
 
     public function testIbexaMigrationComparatorIsAvailableInContainer(): void
