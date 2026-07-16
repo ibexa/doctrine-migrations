@@ -14,6 +14,7 @@ use Doctrine\Migrations\MigrationsRepository;
 use Doctrine\Migrations\Version\Comparator;
 use Ibexa\Bundle\DoctrineMigrations\Comparator\IbexaMigrationComparator;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaMigrationTag;
+use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaOnlyMigrationsRepository;
 use Ibexa\DoctrineMigrations\Migration\ServiceMigrationsRepository;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Argument\BoundArgument;
@@ -42,6 +43,10 @@ use Symfony\Component\DependencyInjection\TypedReference;
  * {@code doctrine.migrations.service_migrations_repository} is present it is injected as
  * the inner (decorated) repository so that all project migrations remain available alongside
  * Ibexa-internal ones.
+ *
+ * The same tagged migrations are also wired into the {@see IbexaOnlyMigrationsRepository::SERVICE_ID}
+ * service — a second, separate {@see ServiceMigrationsRepository} instance that never decorates an
+ * inner repository, for callers that explicitly need only Ibexa-internal migrations.
  */
 final class RegisterMigrationsPass implements CompilerPassInterface
 {
@@ -69,6 +74,12 @@ final class RegisterMigrationsPass implements CompilerPassInterface
         }
 
         $repositoryDefinition->replaceArgument(0, new ServiceLocatorArgument($migrationRefs));
+
+        // Same tagged migrations, exposed without decorating any inner repository.
+        if ($container->hasDefinition(IbexaOnlyMigrationsRepository::SERVICE_ID)) {
+            $container->getDefinition(IbexaOnlyMigrationsRepository::SERVICE_ID)
+                ->replaceArgument(0, new ServiceLocatorArgument($migrationRefs));
+        }
 
         // Decorate the Doctrine bundle's service-migrations repository when present,
         // so that project migrations are preserved alongside Ibexa-internal ones.

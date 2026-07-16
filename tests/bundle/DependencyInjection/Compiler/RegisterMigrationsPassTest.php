@@ -14,6 +14,7 @@ use Doctrine\Migrations\Version\Comparator;
 use Ibexa\Bundle\DoctrineMigrations\Comparator\IbexaMigrationComparator;
 use Ibexa\Bundle\DoctrineMigrations\DependencyInjection\Compiler\RegisterMigrationsPass;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaMigrationTag;
+use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaOnlyMigrationsRepository;
 use Ibexa\DoctrineMigrations\Migration\ServiceMigrationsRepository;
 use Ibexa\Tests\Bundle\DoctrineMigrations\Fixtures\IbexaMigrationV500A;
 use Ibexa\Tests\Bundle\DoctrineMigrations\Fixtures\IbexaMigrationV500B;
@@ -67,6 +68,63 @@ final class RegisterMigrationsPassTest extends TestCase
         $values = $arg0->getValues();
         self::assertArrayHasKey(IbexaMigrationV500A::class, $values);
         self::assertArrayHasKey(IbexaMigrationV500B::class, $values);
+    }
+
+    public function testTaggedMigrationsAreAlsoWiredIntoIbexaOnlyRepositoryServiceLocator(): void
+    {
+        $container = $this->buildBaseContainer();
+        $container->register(IbexaMigrationV500A::class, IbexaMigrationV500A::class)
+            ->addTag(IbexaMigrationTag::TAG);
+        $container->register(IbexaMigrationV500B::class, IbexaMigrationV500B::class)
+            ->addTag(IbexaMigrationTag::TAG);
+
+        (new RegisterMigrationsPass())->process($container);
+
+        $arg0 = $container->getDefinition(IbexaOnlyMigrationsRepository::SERVICE_ID)->getArgument(0);
+        self::assertInstanceOf(ServiceLocatorArgument::class, $arg0);
+
+        $values = $arg0->getValues();
+        self::assertArrayHasKey(IbexaMigrationV500A::class, $values);
+        self::assertArrayHasKey(IbexaMigrationV500B::class, $values);
+    }
+
+    public function testIbexaOnlyRepositoryNeverHasAnInnerRepository(): void
+    {
+        $container = $this->buildBaseContainer();
+        $container->register('doctrine.migrations.service_migrations_repository');
+
+        (new RegisterMigrationsPass())->process($container);
+
+        // Arg 1 is a literal null in services.php and the pass never touches it.
+        self::assertNull($container->getDefinition(IbexaOnlyMigrationsRepository::SERVICE_ID)->getArgument(1));
+    }
+
+    public function testIbexaOnlyRepositoryIsNotRegisteredWithDependencyFactory(): void
+    {
+        $container = $this->buildBaseContainer();
+
+        (new RegisterMigrationsPass())->process($container);
+
+        // Only the combined repository is wired as the active MigrationsRepository —
+        // the Ibexa-only one stays a plain, separately-fetchable container service.
+        $arg = $this->getSetDefinitionArg($container, MigrationsRepository::class);
+        self::assertInstanceOf(ServiceClosureArgument::class, $arg);
+
+        $reference = $arg->getValues()[0];
+        self::assertInstanceOf(Reference::class, $reference);
+        self::assertSame(ServiceMigrationsRepository::class, (string) $reference);
+    }
+
+    public function testPassIsNoOpForIbexaOnlyRepositoryWhenNotDefined(): void
+    {
+        $container = $this->buildBaseContainer();
+        $container->removeDefinition(IbexaOnlyMigrationsRepository::SERVICE_ID);
+
+        (new RegisterMigrationsPass())->process($container);
+
+        // No exception, and the combined repository is still wired as usual.
+        $arg0 = $container->getDefinition(ServiceMigrationsRepository::class)->getArgument(0);
+        self::assertInstanceOf(ServiceLocatorArgument::class, $arg0);
     }
 
     public function testEmptyServiceLocatorWhenNoTaggedMigrations(): void
@@ -169,6 +227,10 @@ final class RegisterMigrationsPassTest extends TestCase
         $container->register(ServiceMigrationsRepository::class)
             ->addArgument(new AbstractArgument('migrations service locator'))
             ->addArgument(new AbstractArgument('optional inner MigrationsRepository'));
+
+        $container->register(IbexaOnlyMigrationsRepository::SERVICE_ID, ServiceMigrationsRepository::class)
+            ->addArgument(new AbstractArgument('migrations service locator'))
+            ->addArgument(null);
 
         $container->register('doctrine.migrations.dependency_factory');
         $container->register('doctrine.migrations.connection');

@@ -10,6 +10,7 @@ namespace Ibexa\Tests\Integration\DoctrineMigrations;
 
 use Doctrine\Migrations\Version\Version;
 use Ibexa\Bundle\DoctrineMigrations\Comparator\IbexaMigrationComparator;
+use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaOnlyMigrationsRepository;
 use Ibexa\DoctrineMigrations\Migration\ServiceMigrationsRepository;
 use Ibexa\Tests\Integration\DoctrineMigrations\Fixtures\IntegrationTestMigration;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -35,6 +36,25 @@ final class IbexaDoctrineMigrationsIntegrationTest extends KernelTestCase
             ServiceMigrationsRepository::class,
             self::getContainer()->get(ServiceMigrationsRepository::class),
         );
+    }
+
+    public function testIbexaOnlyMigrationsRepositoryIsAvailableInContainer(): void
+    {
+        self::assertInstanceOf(
+            ServiceMigrationsRepository::class,
+            self::getContainer()->get('test.' . IbexaOnlyMigrationsRepository::SERVICE_ID),
+        );
+    }
+
+    public function testIbexaOnlyMigrationsRepositoryDiscoversTaggedMigrationWithoutAnInnerRepository(): void
+    {
+        $repo = self::getContainer()->get('test.' . IbexaOnlyMigrationsRepository::SERVICE_ID);
+        self::assertInstanceOf(ServiceMigrationsRepository::class, $repo);
+
+        $items = $repo->getMigrations()->getItems();
+
+        self::assertCount(1, $items);
+        self::assertSame(IntegrationTestMigration::class, (string) $items[0]->getVersion());
     }
 
     public function testIbexaMigrationComparatorIsAvailableInContainer(): void

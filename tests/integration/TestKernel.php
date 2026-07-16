@@ -13,6 +13,7 @@ use Doctrine\DBAL\DriverManager;
 use Doctrine\Migrations\DependencyFactory;
 use Ibexa\Bundle\DoctrineMigrations\IbexaDoctrineMigrationsBundle;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaMigrationTag;
+use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaOnlyMigrationsRepository;
 use Ibexa\Tests\Integration\DoctrineMigrations\Fixtures\IntegrationTestMigration;
 use Psr\Log\NullLogger;
 use Symfony\Bundle\FrameworkBundle\FrameworkBundle;
@@ -58,6 +59,11 @@ final class TestKernel extends Kernel
             $container->register(IntegrationTestMigration::class, IntegrationTestMigration::class)
                 ->setAutowired(true)
                 ->addTag(IbexaMigrationTag::TAG);
+
+            // Public alias so the test can fetch the otherwise-private Ibexa-only
+            // repository directly, following Symfony's test-only alias convention.
+            $container->setAlias('test.' . IbexaOnlyMigrationsRepository::SERVICE_ID, IbexaOnlyMigrationsRepository::SERVICE_ID)
+                ->setPublic(true);
         });
     }
 

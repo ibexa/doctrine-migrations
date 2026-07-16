@@ -7,6 +7,7 @@
 declare(strict_types=1);
 
 use Ibexa\Bundle\DoctrineMigrations\Comparator\IbexaMigrationComparator;
+use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaOnlyMigrationsRepository;
 use Ibexa\DoctrineMigrations\Migration\ServiceMigrationsRepository;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 
@@ -23,6 +24,13 @@ return static function (ContainerConfigurator $containerConfigurator): void {
         ->args([
             abstract_arg('migrations service locator'),
             abstract_arg('optional inner MigrationsRepository'),
+        ]);
+
+    // Same repository, but never decorates an inner MigrationsRepository — see IbexaOnlyMigrationsRepository.
+    $services->set(IbexaOnlyMigrationsRepository::SERVICE_ID, ServiceMigrationsRepository::class)
+        ->args([
+            abstract_arg('migrations service locator'),
+            null,
         ]);
 
     $services->set(IbexaMigrationComparator::class);
