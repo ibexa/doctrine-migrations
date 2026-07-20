@@ -11,6 +11,7 @@ use Doctrine\Migrations\Configuration\Connection\ExistingConnection;
 use Doctrine\Migrations\Configuration\Migration\ExistingConfiguration;
 use Doctrine\Migrations\DependencyFactory;
 use Doctrine\Migrations\MigrationsRepository;
+use Doctrine\Migrations\Version\Comparator;
 use Ibexa\Bundle\DoctrineMigrations\Comparator\IbexaMigrationComparator;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaOnlyDependencyFactory;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaOnlyMigrationsRepository;
@@ -59,7 +60,8 @@ return static function (ContainerConfigurator $containerConfigurator): void {
             inline_service()
                 ->factory([abstract_arg('the application\'s doctrine.migrations.dependency_factory service'), 'getLogger']),
         ])
-        ->call('setService', [MigrationsRepository::class, service(IbexaOnlyMigrationsRepository::SERVICE_ID)]);
+        ->call('setService', [MigrationsRepository::class, service(IbexaOnlyMigrationsRepository::SERVICE_ID)])
+        ->call('setService', [Comparator::class, service(IbexaMigrationComparator::class)]);
 
     $services->set(IbexaMigrationComparator::class);
 };
