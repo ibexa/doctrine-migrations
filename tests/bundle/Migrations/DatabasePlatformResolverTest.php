@@ -11,24 +11,24 @@ namespace Ibexa\Tests\Bundle\DoctrineMigrations\Migrations;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
 use Ibexa\Bundle\DoctrineMigrations\Migrations\DatabasePlatformResolver;
-use Ibexa\DoctrineMigrations\Migration\Yaml\SqlYamlPlatform;
+use Ibexa\DoctrineMigrations\Migration\SqlPlatform;
 use PHPUnit\Framework\TestCase;
 
 final class DatabasePlatformResolverTest extends TestCase
 {
     public function testResolveReturnsMysqlIdentifier(): void
     {
-        self::assertSame(SqlYamlPlatform::MYSQL, DatabasePlatformResolver::resolve($this->buildConnection($this->getMysqlPlatformClass())));
+        self::assertSame(SqlPlatform::MYSQL, DatabasePlatformResolver::resolve($this->buildConnection($this->getMysqlPlatformClass())));
     }
 
     public function testResolveReturnsPostgresqlIdentifier(): void
     {
-        self::assertSame(SqlYamlPlatform::POSTGRESQL, DatabasePlatformResolver::resolve($this->buildConnection($this->getPostgresqlPlatformClass())));
+        self::assertSame(SqlPlatform::POSTGRESQL, DatabasePlatformResolver::resolve($this->buildConnection($this->getPostgresqlPlatformClass())));
     }
 
     public function testResolveReturnsSqliteIdentifier(): void
     {
-        self::assertSame(SqlYamlPlatform::SQLITE, DatabasePlatformResolver::resolve($this->buildConnection($this->getSqlitePlatformClass())));
+        self::assertSame(SqlPlatform::SQLITE, DatabasePlatformResolver::resolve($this->buildConnection($this->getSqlitePlatformClass())));
     }
 
     public function testResolveReturnsNullForUnsupportedPlatform(): void

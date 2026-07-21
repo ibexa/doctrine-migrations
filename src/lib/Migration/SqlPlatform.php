@@ -6,13 +6,13 @@
  */
 declare(strict_types=1);
 
-namespace Ibexa\DoctrineMigrations\Migration\Yaml;
+namespace Ibexa\DoctrineMigrations\Migration;
 
 /**
- * The database platform identifiers recognized by the `platforms` key of a
- * {@see SqlYamlDefinitionLoader} entry.
+ * The database platform identifiers recognized across the Doctrine Migrations integration
+ * (see {@see \Ibexa\Bundle\DoctrineMigrations\Migrations\DatabasePlatformResolver}).
  */
-final class SqlYamlPlatform
+final class SqlPlatform
 {
     public const MYSQL = 'mysql';
 
