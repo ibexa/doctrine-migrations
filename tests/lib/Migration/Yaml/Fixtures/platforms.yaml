@@ -1,6 +1,0 @@
-up:
-    - sql: 'SELECT 1;'
-    - sql: 'SELECT 1;'
-      platforms: 'mysql'
-    - sql: 'SELECT 1;'
-      platforms: ['mysql', 'postgresql']

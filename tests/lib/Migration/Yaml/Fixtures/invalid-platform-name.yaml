@@ -1,3 +1,0 @@
-up:
-    - sql: 'SELECT 1;'
-      platforms: 'oracle'

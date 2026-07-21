@@ -1,3 +1,0 @@
-up:
-    - file: 'sql/no_params.sql'
-      parameters: 'not-an-array'
