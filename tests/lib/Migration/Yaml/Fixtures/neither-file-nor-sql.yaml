@@ -1,2 +1,0 @@
-up:
-    - parameters: { foo: 'bar' }
