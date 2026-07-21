@@ -50,6 +50,8 @@ abstract class AbstractSqlMigration extends AbstractMigration
     /**
      * Loads a file containing one or more SQL statements separated by $delimiter (on its own
      * line) and queues each non-empty statement for execution via {@see addSql()}.
+     *
+     * @param non-empty-string $delimiter
      */
     final protected function addSqlFile(string $file, string $delimiter = self::DEFAULT_SQL_STATEMENT_DELIMITER): void
     {
