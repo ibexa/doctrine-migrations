@@ -10,7 +10,7 @@ namespace Ibexa\DoctrineMigrations\Migration;
 
 /**
  * The database platform identifiers recognized across the Doctrine Migrations integration
- * (see {@see \Ibexa\Bundle\DoctrineMigrations\Migrations\DatabasePlatformResolver}).
+ * (see {@see Ibexa\Bundle\DoctrineMigrations\Migrations\DatabasePlatformResolver}).
  */
 final class SqlPlatform
 {

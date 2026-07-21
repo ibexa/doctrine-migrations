@@ -53,8 +53,10 @@ abstract class AbstractSqlMigration extends AbstractMigration
      *
      * @param non-empty-string $delimiter
      */
-    final protected function addSqlFile(string $file, string $delimiter = self::DEFAULT_SQL_STATEMENT_DELIMITER): void
-    {
+    final protected function addSqlFile(
+        string $file,
+        string $delimiter = self::DEFAULT_SQL_STATEMENT_DELIMITER
+    ): void {
         if (!is_file($file) || !is_readable($file)) {
             throw new \RuntimeException(sprintf('Unable to read SQL file "%s".', $file));
         }

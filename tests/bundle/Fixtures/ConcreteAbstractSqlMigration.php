@@ -18,9 +18,7 @@ final class ConcreteAbstractSqlMigration extends AbstractSqlMigration
         return 'Test SQL-based multi-platform migration';
     }
 
-    public function up(Schema $schema): void
-    {
-    }
+    public function up(Schema $schema): void {}
 
     public function isMySQLPublic(): bool
     {
@@ -45,8 +43,10 @@ final class ConcreteAbstractSqlMigration extends AbstractSqlMigration
     /**
      * @param non-empty-string $delimiter
      */
-    public function addSqlFilePublic(string $file, string $delimiter = self::DEFAULT_SQL_STATEMENT_DELIMITER): void
-    {
+    public function addSqlFilePublic(
+        string $file,
+        string $delimiter = self::DEFAULT_SQL_STATEMENT_DELIMITER
+    ): void {
         $this->addSqlFile($file, $delimiter);
     }
 }
