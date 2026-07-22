@@ -76,6 +76,30 @@ abstract class AbstractSqlMigration extends AbstractMigration
         }
     }
 
+    /**
+     * Aborts the migration with a clear error message unless the current connection is one of
+     * the given platform identifiers (see {@see SqlPlatform}'s constants) — e.g.
+     * `$this->abortIfUnsupportedPlatform(SqlPlatform::MYSQL, SqlPlatform::POSTGRESQL, SqlPlatform::SQLITE);`.
+     *
+     * @param string ...$supportedPlatforms one or more of {@see SqlPlatform}'s constants
+     */
+    final protected function abortIfUnsupportedPlatform(string ...$supportedPlatforms): void
+    {
+        foreach ($supportedPlatforms as $platform) {
+            if ($this->isPlatform($platform)) {
+                return;
+            }
+        }
+
+        $this->abortIf(
+            true,
+            sprintf(
+                'Unsupported database platform. This migration only supports: %s.',
+                implode(', ', $supportedPlatforms)
+            )
+        );
+    }
+
     private function resolvePlatform(): ?string
     {
         return $this->resolvedPlatform ??= DatabasePlatformResolver::resolve($this->connection);

@@ -10,6 +10,7 @@ namespace Ibexa\Tests\Bundle\DoctrineMigrations\Migrations;
 
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
+use Doctrine\Migrations\Exception\AbortMigration;
 use Ibexa\DoctrineMigrations\Migration\SqlPlatform;
 use Ibexa\Tests\Bundle\DoctrineMigrations\Fixtures\ConcreteAbstractSqlMigration;
 use PHPUnit\Framework\TestCase;
@@ -84,6 +85,34 @@ final class AbstractSqlMigrationTest extends TestCase
         $this->expectException(\RuntimeException::class);
 
         $migration->addSqlFilePublic(__DIR__ . '/../Fixtures/sql/does-not-exist.sql');
+    }
+
+    public function testAbortIfUnsupportedPlatformDoesNotThrowWhenPlatformIsSupported(): void
+    {
+        $migration = $this->buildMigration($this->createMock($this->getPostgresqlPlatformClass()));
+
+        $migration->abortIfUnsupportedPlatformPublic(SqlPlatform::MYSQL, SqlPlatform::POSTGRESQL, SqlPlatform::SQLITE);
+
+        self::assertSame([], $this->getQueuedStatements($migration));
+    }
+
+    public function testAbortIfUnsupportedPlatformThrowsWhenPlatformIsNotInGivenList(): void
+    {
+        $migration = $this->buildMigration($this->createMock($this->getPostgresqlPlatformClass()));
+
+        $this->expectException(AbortMigration::class);
+        $this->expectExceptionMessage('Unsupported database platform. This migration only supports: mysql, sqlite.');
+
+        $migration->abortIfUnsupportedPlatformPublic(SqlPlatform::MYSQL, SqlPlatform::SQLITE);
+    }
+
+    public function testAbortIfUnsupportedPlatformThrowsWhenPlatformIsCompletelyUnsupported(): void
+    {
+        $migration = $this->buildMigration($this->createMock(AbstractPlatform::class));
+
+        $this->expectException(AbortMigration::class);
+
+        $migration->abortIfUnsupportedPlatformPublic(SqlPlatform::MYSQL, SqlPlatform::POSTGRESQL, SqlPlatform::SQLITE);
     }
 
     /**
