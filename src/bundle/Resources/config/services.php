@@ -29,13 +29,9 @@ return static function (ContainerConfigurator $containerConfigurator): void {
         ->autowire()
         ->autoconfigure(false);
 
-    $services->set(ServiceMigrationsRepository::class)
-        ->args([
-            abstract_arg('migrations service locator'),
-            abstract_arg('optional inner MigrationsRepository'),
-        ]);
-
-    // Same repository, but never decorates an inner MigrationsRepository — see IbexaOnlyMigrationsRepository.
+    // Never decorates an inner MigrationsRepository — see IbexaOnlyMigrationsRepository. This is
+    // the only ServiceMigrationsRepository this bundle registers: Ibexa's migrations are never
+    // combined into the application's own MigrationsRepository -- see RegisterMigrationsPass.
     $services->set(IbexaOnlyMigrationsRepository::SERVICE_ID, ServiceMigrationsRepository::class)
         ->args([
             abstract_arg('migrations service locator'),
