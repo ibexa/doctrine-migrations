@@ -21,5 +21,6 @@ final class IbexaDoctrineMigrationsExtension extends Extension
     ): void {
         $loader = new PhpFileLoader($container, new FileLocator(__DIR__ . '/../Resources/config'));
         $loader->load('services.php');
+        $loader->load('console.php');
     }
 }
