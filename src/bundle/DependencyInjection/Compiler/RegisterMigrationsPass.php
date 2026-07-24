@@ -9,6 +9,7 @@ declare(strict_types=1);
 namespace Ibexa\Bundle\DoctrineMigrations\DependencyInjection\Compiler;
 
 use Doctrine\DBAL\Connection;
+use Ibexa\Bundle\DoctrineMigrations\Configuration\IbexaMigrationConfigurationFactory;
 use Ibexa\Bundle\RepositoryInstaller\Migration\TaggedMigrationsRunner;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaMigrationTag;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaOnlyDependencyFactory;
@@ -43,8 +44,10 @@ use Symfony\Component\DependencyInjection\TypedReference;
  * Finally, the {@see IbexaOnlyDependencyFactory::SERVICE_ID} service — an independent copy of the
  * application's DependencyFactory that always runs against the "ibexa.persistence.connection"
  * service (assumed to exist; it's created by ibexa/core) and uses the Ibexa-only repository above
- * — has its Configuration/logger wired to be fetched from the application's own
- * "doctrine.migrations.dependency_factory" (sharing configuration, not migration data).
+ * — has its Configuration built from the application's own by
+ * {@see IbexaMigrationConfigurationFactory} (a
+ * clone carrying an Ibexa-specific migration template, never the exact same instance) and its
+ * logger fetched directly from the application's own "doctrine.migrations.dependency_factory".
  */
 final class RegisterMigrationsPass implements CompilerPassInterface
 {
@@ -71,9 +74,9 @@ final class RegisterMigrationsPass implements CompilerPassInterface
 
         // Independent copy of the application's DependencyFactory, always using the Ibexa-only
         // repository (its "ibexa.persistence.connection" argument is wired directly in
-        // services.php). Its Configuration and logger are fetched from the application's
-        // DependencyFactory via two inline definitions in services.php, each with an
-        // abstract_arg placeholder standing in for it.
+        // services.php). Its Configuration is built (via IbexaMigrationConfigurationFactory) and
+        // its logger fetched from the application's DependencyFactory via two inline definitions
+        // in services.php, each with an abstract_arg placeholder standing in for it.
         if (
             $container->hasDefinition(IbexaOnlyDependencyFactory::SERVICE_ID)
             && $container->hasDefinition('doctrine.migrations.dependency_factory')
@@ -84,7 +87,7 @@ final class RegisterMigrationsPass implements CompilerPassInterface
             if ($existingConfigurationDefinition instanceof Definition) {
                 $configurationDefinition = $existingConfigurationDefinition->getArgument(0);
                 if ($configurationDefinition instanceof Definition) {
-                    $configurationDefinition->setFactory([new Reference('doctrine.migrations.dependency_factory'), 'getConfiguration']);
+                    $configurationDefinition->replaceArgument(0, new Reference('doctrine.migrations.dependency_factory'));
                 }
             }
 

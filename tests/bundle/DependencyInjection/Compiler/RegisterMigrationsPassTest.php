@@ -14,6 +14,7 @@ use Doctrine\Migrations\Configuration\Connection\ExistingConnection;
 use Doctrine\Migrations\Configuration\Migration\ExistingConfiguration;
 use Doctrine\Migrations\DependencyFactory;
 use Doctrine\Migrations\MigrationsRepository;
+use Ibexa\Bundle\DoctrineMigrations\Configuration\IbexaMigrationConfigurationFactory;
 use Ibexa\Bundle\DoctrineMigrations\DependencyInjection\Compiler\RegisterMigrationsPass;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaMigrationTag;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaOnlyDependencyFactory;
@@ -108,7 +109,7 @@ final class RegisterMigrationsPassTest extends TestCase
         );
     }
 
-    public function testIbexaOnlyDependencyFactoryConfigurationIsFetchedFromApplicationDependencyFactory(): void
+    public function testIbexaOnlyDependencyFactoryConfigurationIsBuiltFromApplicationDependencyFactory(): void
     {
         $container = $this->buildBaseContainer();
 
@@ -120,11 +121,16 @@ final class RegisterMigrationsPassTest extends TestCase
         $configurationDefinition = $existingConfigurationDefinition->getArgument(0);
         self::assertInstanceOf(Definition::class, $configurationDefinition);
 
+        // The factory itself (IbexaMigrationConfigurationFactory::createFromApplicationConfiguration)
+        // is fixed in services.php — the pass only replaces the abstract_arg placeholder argument.
         $factory = $configurationDefinition->getFactory();
         self::assertIsArray($factory);
-        self::assertInstanceOf(Reference::class, $factory[0]);
-        self::assertSame('doctrine.migrations.dependency_factory', (string) $factory[0]);
-        self::assertSame('getConfiguration', $factory[1]);
+        self::assertSame(IbexaMigrationConfigurationFactory::class, $factory[0]);
+        self::assertSame('createFromApplicationConfiguration', $factory[1]);
+
+        $applicationFactoryArgument = $configurationDefinition->getArgument(0);
+        self::assertInstanceOf(Reference::class, $applicationFactoryArgument);
+        self::assertSame('doctrine.migrations.dependency_factory', (string) $applicationFactoryArgument);
     }
 
     public function testIbexaOnlyDependencyFactoryLoggerIsFetchedFromApplicationDependencyFactory(): void
@@ -201,7 +207,8 @@ final class RegisterMigrationsPassTest extends TestCase
                 (new Definition(ExistingConfiguration::class))
                     ->setArguments([
                         (new Definition(Configuration::class))
-                            ->setFactory([new AbstractArgument('the application\'s doctrine.migrations.dependency_factory service'), 'getConfiguration']),
+                            ->setFactory([IbexaMigrationConfigurationFactory::class, 'createFromApplicationConfiguration'])
+                            ->setArguments([new AbstractArgument('the application\'s doctrine.migrations.dependency_factory service')]),
                     ]),
                 new Definition(ExistingConnection::class, [new Reference('ibexa.persistence.connection')]),
                 (new Definition())

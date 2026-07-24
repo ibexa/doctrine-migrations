@@ -13,6 +13,7 @@ use Doctrine\Migrations\DependencyFactory;
 use Doctrine\Migrations\MigrationsRepository;
 use Doctrine\Migrations\Version\Comparator;
 use Ibexa\Bundle\DoctrineMigrations\Comparator\IbexaMigrationComparator;
+use Ibexa\Bundle\DoctrineMigrations\Configuration\IbexaMigrationConfigurationFactory;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaOnlyDependencyFactory;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaOnlyMigrationsRepository;
 use Ibexa\DoctrineMigrations\Migration\ServiceMigrationsRepository;
@@ -38,18 +39,20 @@ return static function (ContainerConfigurator $containerConfigurator): void {
             null,
         ]);
 
-    // Independent copy of the application's own DependencyFactory — same Configuration and logger,
-    // but always running against "ibexa.persistence.connection" (created by ibexa/core) and using
-    // the Ibexa-only repository above — see IbexaOnlyDependencyFactory. The two abstract_arg
-    // placeholders (both standing in for the application's own DependencyFactory) are replaced by
-    // RegisterMigrationsPass.
+    // Independent copy of the application's own DependencyFactory — a clone of the application's
+    // Configuration (see IbexaMigrationConfigurationFactory; carries an Ibexa-specific migration
+    // template instead of the application's own) and the same logger, but always running against
+    // "ibexa.persistence.connection" (created by ibexa/core) and using the Ibexa-only repository
+    // above — see IbexaOnlyDependencyFactory. The two abstract_arg placeholders (both standing in
+    // for the application's own DependencyFactory) are replaced by RegisterMigrationsPass.
     $services->set(IbexaOnlyDependencyFactory::SERVICE_ID, DependencyFactory::class)
         ->factory([DependencyFactory::class, 'fromConnection'])
         ->args([
             inline_service(ExistingConfiguration::class)
                 ->args([
                     inline_service(Configuration::class)
-                        ->factory([abstract_arg('the application\'s doctrine.migrations.dependency_factory service'), 'getConfiguration']),
+                        ->factory([IbexaMigrationConfigurationFactory::class, 'createFromApplicationConfiguration'])
+                        ->args([abstract_arg('the application\'s doctrine.migrations.dependency_factory service')]),
                 ]),
             inline_service(ExistingConnection::class)
                 ->args([service('ibexa.persistence.connection')]),
