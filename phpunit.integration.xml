@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+    bootstrap="tests/integration/bootstrap.php"
+    beStrictAboutOutputDuringTests="true"
+    failOnWarning="true"
+>
+    <php>
+        <env name="KERNEL_CLASS" value="Ibexa\Tests\Integration\DoctrineMigrations\TestKernel" />
+        <ini name="intl.default_locale" value="en_US" />
+    </php>
+    <testsuites>
+        <testsuite name="integration">
+            <directory>tests/integration</directory>
+        </testsuite>
+    </testsuites>
+    <extensions>
+        <bootstrap class="Symfony\Bridge\PhpUnit\SymfonyExtension"/>
+    </extensions>
+</phpunit>

@@ -14,7 +14,8 @@
         "doctrine/migrations": "^3.1",
         "psr/log": "^3.0",
         "symfony/dependency-injection": "^7.3",
-        "symfony/http-kernel": "^7.3"
+        "symfony/http-kernel": "^7.3",
+        "symfony/yaml": "^7.3"
     },
     "require-dev": {
         "ibexa/code-style": "~2.3.0",
@@ -37,6 +38,7 @@
     "autoload-dev": {
         "psr-4": {
             "Ibexa\\Tests\\Bundle\\DoctrineMigrations\\": "tests/bundle/",
+            "Ibexa\\Tests\\Integration\\DoctrineMigrations\\": "tests/integration/",
             "Ibexa\\Tests\\DoctrineMigrations\\": "tests/lib/"
         }
     },
@@ -44,6 +46,7 @@
         "fix-cs": "php-cs-fixer fix --config=.php-cs-fixer.php --show-progress=dots",
         "check-cs": "@fix-cs --dry-run",
         "test": "phpunit -c phpunit.xml.dist",
+        "test-integration": "phpunit -c phpunit.integration.xml",
         "phpstan": "phpstan analyse -c phpstan.neon",
         "deptrac": "php vendor/bin/deptrac analyse"
     },
@@ -51,6 +54,7 @@
         "fix-cs": "Automatically fixes code style in all files",
         "check-cs": "Run code style checker for all files",
         "test": "Run automatic tests",
+        "test-integration": "Run integration tests",
         "phpstan": "Run static code analysis",
         "deptrac": "Run Deptrac architecture testing"
     },
