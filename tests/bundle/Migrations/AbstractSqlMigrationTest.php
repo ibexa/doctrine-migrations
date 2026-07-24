@@ -10,6 +10,9 @@ namespace Ibexa\Tests\Bundle\DoctrineMigrations\Migrations;
 
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
+use Doctrine\DBAL\Platforms\PostgreSQLPlatform;
+use Doctrine\DBAL\Platforms\SqlitePlatform;
 use Doctrine\Migrations\Exception\AbortMigration;
 use Ibexa\DoctrineMigrations\Migration\SqlPlatform;
 use Ibexa\Tests\Bundle\DoctrineMigrations\Fixtures\ConcreteAbstractSqlMigration;
@@ -139,10 +142,7 @@ final class AbstractSqlMigrationTest extends TestCase
      */
     private function getMysqlPlatformClass(): string
     {
-        // DBAL 2 uses MySqlPlatform; DBAL 3 renamed it to MySQLPlatform
-        return class_exists('Doctrine\\DBAL\\Platforms\\MySqlPlatform')
-            ? 'Doctrine\\DBAL\\Platforms\\MySqlPlatform'
-            : 'Doctrine\\DBAL\\Platforms\\MySQLPlatform';
+        return MySQLPlatform::class;
     }
 
     /**
@@ -150,10 +150,7 @@ final class AbstractSqlMigrationTest extends TestCase
      */
     private function getPostgresqlPlatformClass(): string
     {
-        // DBAL 2 uses PostgreSqlPlatform; DBAL 3 renamed it to PostgreSQLPlatform
-        return class_exists('Doctrine\\DBAL\\Platforms\\PostgreSqlPlatform')
-            ? 'Doctrine\\DBAL\\Platforms\\PostgreSqlPlatform'
-            : 'Doctrine\\DBAL\\Platforms\\PostgreSQLPlatform';
+        return PostgreSQLPlatform::class;
     }
 
     /**
@@ -161,9 +158,6 @@ final class AbstractSqlMigrationTest extends TestCase
      */
     private function getSqlitePlatformClass(): string
     {
-        // Earlier DBAL releases use SqlitePlatform; later DBAL 3 releases renamed it to SQLitePlatform
-        return class_exists('Doctrine\\DBAL\\Platforms\\SqlitePlatform')
-            ? 'Doctrine\\DBAL\\Platforms\\SqlitePlatform'
-            : 'Doctrine\\DBAL\\Platforms\\SQLitePlatform';
+        return SqlitePlatform::class;
     }
 }
