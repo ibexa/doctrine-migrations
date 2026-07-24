@@ -36,8 +36,8 @@ final class IbexaMigrationComparator implements Comparator
         $classA = (string) $a;
         $classB = (string) $b;
 
-        $isIbexaA = class_exists($classA) && is_subclass_of($classA, IbexaMigrationInterface::class);
-        $isIbexaB = class_exists($classB) && is_subclass_of($classB, IbexaMigrationInterface::class);
+        $isIbexaA = $this->isIbexaMigration($classA);
+        $isIbexaB = $this->isIbexaMigration($classB);
 
         if ($isIbexaA && !$isIbexaB) {
             return -1;
@@ -48,8 +48,6 @@ final class IbexaMigrationComparator implements Comparator
         }
 
         if ($isIbexaA) {
-            /** @var class-string<IbexaMigrationInterface> $classA */
-            /** @var class-string<IbexaMigrationInterface> $classB */
             $versionA = $classA::getTargetVersion();
             $versionB = $classB::getTargetVersion();
 
@@ -65,5 +63,13 @@ final class IbexaMigrationComparator implements Comparator
         }
 
         return $this->fallbackComparator->compare($a, $b);
+    }
+
+    /**
+     * @phpstan-assert-if-true class-string<IbexaMigrationInterface> $class
+     */
+    private function isIbexaMigration(string $class): bool
+    {
+        return class_exists($class) && is_subclass_of($class, IbexaMigrationInterface::class);
     }
 }

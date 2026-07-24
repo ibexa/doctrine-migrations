@@ -77,10 +77,14 @@ final class RegisterMigrationsPass implements CompilerPassInterface
         // services.php). Its Configuration is built (via IbexaMigrationConfigurationFactory) and
         // its logger fetched from the application's DependencyFactory via two inline definitions
         // in services.php, each with an abstract_arg placeholder standing in for it.
-        if (
-            $container->hasDefinition(IbexaOnlyDependencyFactory::SERVICE_ID)
-            && $container->hasDefinition('doctrine.migrations.dependency_factory')
-        ) {
+        if ($container->hasDefinition(IbexaOnlyDependencyFactory::SERVICE_ID)) {
+            if (!$container->hasDefinition('doctrine.migrations.dependency_factory')) {
+                throw new \LogicException(sprintf(
+                    'Service "%s" is missing. DoctrineMigrationsBundle must be registered to use Ibexa doctrine-migrations.',
+                    'doctrine.migrations.dependency_factory'
+                ));
+            }
+
             $ibexaOnlyDependencyFactoryDefinition = $container->getDefinition(IbexaOnlyDependencyFactory::SERVICE_ID);
 
             $existingConfigurationDefinition = $ibexaOnlyDependencyFactoryDefinition->getArgument(0);

@@ -179,16 +179,15 @@ final class RegisterMigrationsPassTest extends TestCase
         self::assertArrayHasKey(IbexaMigrationV500A::class, $arg0->getValues());
     }
 
-    public function testPassIsNoOpWhenApplicationDependencyFactoryNotDefined(): void
+    public function testThrowsExceptionWhenApplicationDependencyFactoryNotDefined(): void
     {
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage('Service "doctrine.migrations.dependency_factory" is missing. DoctrineMigrationsBundle must be registered to use Ibexa doctrine-migrations.');
+
         $container = $this->buildBaseContainer();
         $container->removeDefinition('doctrine.migrations.dependency_factory');
 
         (new RegisterMigrationsPass())->process($container);
-
-        // No exception, and the Ibexa-only repository is still wired as usual.
-        $arg0 = $container->getDefinition(IbexaOnlyMigrationsRepository::SERVICE_ID)->getArgument(0);
-        self::assertInstanceOf(ServiceLocatorArgument::class, $arg0);
     }
 
     // ── helpers ───────────────────────────────────────────────────────────────
