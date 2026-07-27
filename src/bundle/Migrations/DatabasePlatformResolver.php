@@ -17,7 +17,7 @@ use Ibexa\DoctrineMigrations\Migration\SqlPlatform;
  */
 final class DatabasePlatformResolver
 {
-    public static function resolve(Connection $connection): ?string
+    public static function resolve(Connection $connection): ?SqlPlatform
     {
         $platform = $connection->getDatabasePlatform();
 
