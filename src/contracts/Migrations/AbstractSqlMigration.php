@@ -22,7 +22,7 @@ abstract class AbstractSqlMigration extends AbstractMigration
 {
     public const DEFAULT_SQL_STATEMENT_DELIMITER = '-- ibexa:sql-statement-separator';
 
-    private ?string $resolvedPlatform = null;
+    private ?SqlPlatform $resolvedPlatform = null;
 
     final protected function isMySQL(): bool
     {
@@ -39,10 +39,7 @@ abstract class AbstractSqlMigration extends AbstractMigration
         return $this->isPlatform(SqlPlatform::SQLITE);
     }
 
-    /**
-     * @param string $platform one of {@see SqlPlatform}'s constants
-     */
-    final protected function isPlatform(string $platform): bool
+    final protected function isPlatform(SqlPlatform $platform): bool
     {
         return $this->resolvePlatform() === $platform;
     }
@@ -78,12 +75,10 @@ abstract class AbstractSqlMigration extends AbstractMigration
 
     /**
      * Aborts the migration with a clear error message unless the current connection is one of
-     * the given platform identifiers (see {@see SqlPlatform}'s constants) — e.g.
+     * the given platforms — e.g.
      * `$this->abortIfUnsupportedPlatform(SqlPlatform::MYSQL, SqlPlatform::POSTGRESQL, SqlPlatform::SQLITE);`.
-     *
-     * @param string ...$supportedPlatforms one or more of {@see SqlPlatform}'s constants
      */
-    final protected function abortIfUnsupportedPlatform(string ...$supportedPlatforms): void
+    final protected function abortIfUnsupportedPlatform(SqlPlatform ...$supportedPlatforms): void
     {
         foreach ($supportedPlatforms as $platform) {
             if ($this->isPlatform($platform)) {
@@ -95,12 +90,15 @@ abstract class AbstractSqlMigration extends AbstractMigration
             true,
             sprintf(
                 'Unsupported database platform. This migration only supports: %s.',
-                implode(', ', $supportedPlatforms)
+                implode(', ', array_map(
+                    static fn (SqlPlatform $platform): string => $platform->value,
+                    $supportedPlatforms
+                ))
             )
         );
     }
 
-    private function resolvePlatform(): ?string
+    private function resolvePlatform(): ?SqlPlatform
     {
         return $this->resolvedPlatform ??= DatabasePlatformResolver::resolve($this->connection);
     }

@@ -12,19 +12,19 @@ namespace Ibexa\DoctrineMigrations\Migration;
  * The database platform identifiers recognized across the Doctrine Migrations integration
  * (see {@see Ibexa\Bundle\DoctrineMigrations\Migrations\DatabasePlatformResolver}).
  */
-final class SqlPlatform
+enum SqlPlatform: string
 {
-    public const MYSQL = 'mysql';
+    case MYSQL = 'mysql';
 
-    public const POSTGRESQL = 'postgresql';
+    case POSTGRESQL = 'postgresql';
 
-    public const SQLITE = 'sqlite';
+    case SQLITE = 'sqlite';
 
     /**
-     * @return list<string>
+     * @return list<self>
      */
     public static function all(): array
     {
-        return [self::MYSQL, self::POSTGRESQL, self::SQLITE];
+        return self::cases();
     }
 }

@@ -33,5 +33,5 @@ namespace Ibexa\Contracts\DoctrineMigrations\Migrations;
  */
 final class IbexaMigrationTag
 {
-    public const TAG = 'ibexa.doctrine_migrations.migration';
+    public const string TAG = 'ibexa.doctrine_migrations.migration';
 }
