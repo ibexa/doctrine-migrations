@@ -1,0 +1,50 @@
+<?php
+
+declare(strict_types=1);
+
+namespace <namespace>;
+
+use DateTimeImmutable;
+use Doctrine\DBAL\Schema\Schema;
+use Ibexa\Contracts\DoctrineMigrations\Migrations\AbstractSqlMigration;
+use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaMigrationInterface;
+use Ibexa\DoctrineMigrations\Migration\SqlPlatform;
+
+/**
+ * Auto-generated Ibexa migration: please modify to your needs.
+ *
+ * Once finished, move this class into the target package and register it as a service tagged
+ * with Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaMigrationTag::TAG -- Ibexa migrations
+ * are discovered via that tag, not by scanning this directory.
+ */
+final class <className> extends AbstractSqlMigration implements IbexaMigrationInterface
+{
+    public function getDescription(): string
+    {
+        return '';
+    }
+
+    public static function getTargetVersion(): string
+    {
+        return ''; // e.g. '6.0.0' -- the Ibexa version this migration targets
+    }
+
+    public static function getCreationDate(): DateTimeImmutable
+    {
+        return new DateTimeImmutable('now'); // TODO: replace with a fixed date/time literal
+    }
+
+    public function up(Schema $schema): void
+    {
+        $this->abortIfUnsupportedPlatform(SqlPlatform::MYSQL, SqlPlatform::POSTGRESQL, SqlPlatform::SQLITE);
+
+        // this up() migration is auto-generated, please modify it to your needs
+<up>
+    }
+
+    public function down(Schema $schema): void
+    {
+        // this down() migration is auto-generated, please modify it to your needs
+<down>
+    }<override>
+}

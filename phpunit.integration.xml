@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="tests/integration/bootstrap.php"
+         beStrictAboutOutputDuringTests="true"
+         failOnWarning="true">
+    <php>
+        <env name="KERNEL_CLASS" value="Ibexa\Tests\Integration\DoctrineMigrations\TestKernel" />
+        <env name="SYMFONY_DEPRECATIONS_HELPER" value="max[indirect]=20"/>
+        <ini name="intl.default_locale" value="en_US" />
+    </php>
+    <testsuites>
+        <testsuite name="integration">
+            <directory>tests/integration</directory>
+        </testsuite>
+    </testsuites>
+    <listeners>
+        <listener class="Symfony\Bridge\PhpUnit\SymfonyTestsListener"/>
+    </listeners>
+</phpunit>
