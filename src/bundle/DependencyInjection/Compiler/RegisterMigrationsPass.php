@@ -15,6 +15,7 @@ use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaMigrationTag;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaOnlyDependencyFactory;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaOnlyMigrationsRepository;
 use Ibexa\DoctrineMigrations\Migration\ServiceMigrationsRepository;
+use LogicException;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Argument\BoundArgument;
 use Symfony\Component\DependencyInjection\Argument\ServiceLocatorArgument;
@@ -64,7 +65,7 @@ final class RegisterMigrationsPass implements CompilerPassInterface
         }
 
         if (!$container->hasDefinition('doctrine.migrations.dependency_factory')) {
-            throw new \LogicException(sprintf(
+            throw new LogicException(sprintf(
                 'Service "%s" is missing. DoctrineMigrationsBundle must be registered to use Ibexa doctrine-migrations.',
                 'doctrine.migrations.dependency_factory'
             ));
