@@ -88,9 +88,56 @@ final class RegisterMigrationsPassTest extends TestCase
 
         $connectionBinding = $bindings[Connection::class];
         self::assertInstanceOf(BoundArgument::class, $connectionBinding);
+        [$connectionValue] = $connectionBinding->getValues();
+        self::assertInstanceOf(Reference::class, $connectionValue);
+        self::assertSame('ibexa.doctrine_migrations.connection', (string) $connectionValue);
 
         $loggerBinding = $bindings[LoggerInterface::class];
         self::assertInstanceOf(BoundArgument::class, $loggerBinding);
+        [$loggerValue] = $loggerBinding->getValues();
+        self::assertInstanceOf(Reference::class, $loggerValue);
+        self::assertSame('ibexa.doctrine_migrations.logger', (string) $loggerValue);
+    }
+
+    public function testConnectionAndLoggerServicesAreFactoredFromApplicationDependencyFactory(): void
+    {
+        $container = $this->buildBaseContainer();
+
+        (new RegisterMigrationsPass())->process($container);
+
+        $connectionDefinition = $container->getDefinition('ibexa.doctrine_migrations.connection');
+        $connectionFactory = $connectionDefinition->getFactory();
+        self::assertIsArray($connectionFactory);
+        self::assertInstanceOf(Reference::class, $connectionFactory[0]);
+        self::assertSame('doctrine.migrations.dependency_factory', (string) $connectionFactory[0]);
+        self::assertSame('getConnection', $connectionFactory[1]);
+        self::assertFalse($connectionDefinition->isPublic());
+
+        $loggerDefinition = $container->getDefinition('ibexa.doctrine_migrations.logger');
+        $loggerFactory = $loggerDefinition->getFactory();
+        self::assertIsArray($loggerFactory);
+        self::assertInstanceOf(Reference::class, $loggerFactory[0]);
+        self::assertSame('doctrine.migrations.dependency_factory', (string) $loggerFactory[0]);
+        self::assertSame('getLogger', $loggerFactory[1]);
+        self::assertFalse($loggerDefinition->isPublic());
+    }
+
+    public function testWorksWithoutDoctrineMigrationsBundleConnectionAndLoggerAliases(): void
+    {
+        // Simulates "enable_service_migrations: false": DoctrineMigrationsExtension removes
+        // "doctrine.migrations.connection"/"doctrine.migrations.logger" from the container in
+        // that case (they're never registered by buildBaseContainer() below either), so this
+        // proves the pass no longer depends on them.
+        $container = $this->buildBaseContainer();
+        $container->register(IbexaMigrationV500A::class, IbexaMigrationV500A::class)
+            ->addTag(IbexaMigrationTag::TAG);
+
+        (new RegisterMigrationsPass())->process($container);
+
+        self::assertFalse($container->hasDefinition('doctrine.migrations.connection'));
+        self::assertFalse($container->hasDefinition('doctrine.migrations.logger'));
+        self::assertTrue($container->hasDefinition('ibexa.doctrine_migrations.connection'));
+        self::assertTrue($container->hasDefinition('ibexa.doctrine_migrations.logger'));
     }
 
     public function testApplicationDependencyFactoryReceivesNoSetDefinitionCalls(): void
@@ -216,8 +263,6 @@ final class RegisterMigrationsPassTest extends TestCase
             ->addMethodCall('setService', [MigrationsRepository::class, new Reference(IbexaOnlyMigrationsRepository::SERVICE_ID)]);
 
         $container->register('doctrine.migrations.dependency_factory');
-        $container->register('doctrine.migrations.connection');
-        $container->register('doctrine.migrations.logger');
         $container->register('ibexa.persistence.connection');
 
         return $container;
