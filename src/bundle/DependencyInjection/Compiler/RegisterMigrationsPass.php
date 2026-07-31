@@ -38,8 +38,7 @@ use Symfony\Component\DependencyInjection\TypedReference;
  * DoctrineMigrationsBundle) via two Ibexa-owned services, "ibexa.doctrine_migrations.connection"
  * and "ibexa.doctrine_migrations.logger" — never via DoctrineMigrationsBundle's own
  * "doctrine.migrations.connection"/"doctrine.migrations.logger" aliases, since those are removed
- * from the container entirely when "enable_service_migrations" is false, and "doctrine.*" service
- * IDs belong to that bundle, not to Ibexa, to redefine.
+ * from the container entirely when "enable_service_migrations" is false.
  *
  * This pass never touches the application's own {@code doctrine.migrations.dependency_factory}
  * or its {@code MigrationsRepository}/{@code Comparator} — Ibexa's migrations are visible
