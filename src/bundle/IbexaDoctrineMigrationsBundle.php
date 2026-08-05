@@ -23,14 +23,14 @@ final class IbexaDoctrineMigrationsBundle extends AbstractBundle
     }
 
     /**
-     * @param array<mixed> $config
+     * @param array<array-key, mixed> $config
      */
     public function loadExtension(
         array $config,
         ContainerConfigurator $container,
         ContainerBuilder $builder
     ): void {
-        $container->import(__DIR__ . '/Resources/config/services.php');
-        $container->import(__DIR__ . '/Resources/config/console.php');
+        $container->import('Resources/config/services.php');
+        $container->import('Resources/config/console.php');
     }
 }
