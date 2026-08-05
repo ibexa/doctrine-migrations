@@ -22,8 +22,14 @@ final class IbexaDoctrineMigrationsBundle extends AbstractBundle
         $container->addCompilerPass(new RegisterMigrationsPass(), PassConfig::TYPE_BEFORE_OPTIMIZATION, -10);
     }
 
-    public function loadExtension(array $config, ContainerConfigurator $container, ContainerBuilder $builder): void
-    {
+    /**
+     * @param array<array-key, mixed> $config
+     */
+    public function loadExtension(
+        array $config,
+        ContainerConfigurator $container,
+        ContainerBuilder $builder
+    ): void {
         $container->import('Resources/config/services.php');
         $container->import('Resources/config/console.php');
     }
