@@ -12,7 +12,7 @@ use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
 use Doctrine\DBAL\Platforms\MySQLPlatform;
 use Doctrine\DBAL\Platforms\PostgreSQLPlatform;
-use Doctrine\DBAL\Platforms\SqlitePlatform;
+use Doctrine\DBAL\Platforms\SQLitePlatform;
 use Doctrine\Migrations\Exception\AbortMigration;
 use Ibexa\DoctrineMigrations\Migration\SqlPlatform;
 use Ibexa\Tests\Bundle\DoctrineMigrations\Fixtures\ConcreteAbstractSqlMigration;
@@ -158,6 +158,6 @@ final class AbstractSqlMigrationTest extends TestCase
      */
     private function getSqlitePlatformClass(): string
     {
-        return SqlitePlatform::class;
+        return SQLitePlatform::class;
     }
 }

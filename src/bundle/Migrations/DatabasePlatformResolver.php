@@ -38,7 +38,7 @@ final class DatabasePlatformResolver
 
         $sqliteClass = class_exists('Doctrine\\DBAL\\Platforms\\SQLitePlatform')
             ? 'Doctrine\\DBAL\\Platforms\\SQLitePlatform'
-            : 'Doctrine\\DBAL\\Platforms\\SqlitePlatform';
+            : 'Doctrine\\DBAL\\Platforms\\SQLitePlatform';
         if ($platform instanceof $sqliteClass) {
             return SqlPlatform::SQLITE;
         }
