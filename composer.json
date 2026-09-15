@@ -21,6 +21,7 @@
     "require-dev": {
         "ibexa/code-style": "~2.3.0",
         "ibexa/phpstan": "~6.0.x-dev",
+        "ibexa/test-core": "~6.0.x-dev",
         "phpstan/phpstan": "^2.0",
         "phpstan/phpstan-phpunit": "^2.0",
         "phpstan/phpstan-strict-rules": "^2.0",

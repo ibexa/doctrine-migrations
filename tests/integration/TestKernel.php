@@ -14,6 +14,7 @@ use Doctrine\Migrations\Configuration\Connection\ExistingConnection;
 use Doctrine\Migrations\Configuration\Migration\ConfigurationArray;
 use Doctrine\Migrations\DependencyFactory;
 use Ibexa\Bundle\DoctrineMigrations\IbexaDoctrineMigrationsBundle;
+use Ibexa\Bundle\Test\Core\IbexaTestCoreBundle;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaMigrationTag;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaOnlyDependencyFactory;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaOnlyMigrationsRepository;
@@ -32,6 +33,7 @@ final class TestKernel extends Kernel
     {
         return [
             new FrameworkBundle(),
+            new IbexaTestCoreBundle(),
             new IbexaDoctrineMigrationsBundle(),
         ];
     }
