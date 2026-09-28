@@ -9,6 +9,7 @@ declare(strict_types=1);
 namespace Ibexa\Bundle\DoctrineMigrations\Migrations;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
 use Ibexa\DoctrineMigrations\Migration\SqlPlatform;
 
 /**
@@ -21,14 +22,12 @@ final class DatabasePlatformResolver
     {
         $platform = $connection->getDatabasePlatform();
 
-        // DBAL 3 renamed these platform classes; DBAL 2 uses the original names.
-        $mysqlClass = class_exists('Doctrine\\DBAL\\Platforms\\MySQLPlatform')
-            ? 'Doctrine\\DBAL\\Platforms\\MySQLPlatform'
-            : 'Doctrine\\DBAL\\Platforms\\MySqlPlatform';
-        if ($platform instanceof $mysqlClass) {
+        // Not MySQLPlatform: as of DBAL 4, MariaDBPlatform extends only AbstractMySQLPlatform.
+        if ($platform instanceof AbstractMySQLPlatform) {
             return SqlPlatform::MYSQL;
         }
 
+        // DBAL 3 renamed these platform classes; DBAL 2 uses the original names.
         $postgresqlClass = class_exists('Doctrine\\DBAL\\Platforms\\PostgreSQLPlatform')
             ? 'Doctrine\\DBAL\\Platforms\\PostgreSQLPlatform'
             : 'Doctrine\\DBAL\\Platforms\\PostgreSqlPlatform';

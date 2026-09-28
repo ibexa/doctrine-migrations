@@ -14,6 +14,7 @@ namespace Ibexa\DoctrineMigrations\Migration;
  */
 enum SqlPlatform: string
 {
+    /** Also covers MariaDB. */
     case MYSQL = 'mysql';
 
     case POSTGRESQL = 'postgresql';

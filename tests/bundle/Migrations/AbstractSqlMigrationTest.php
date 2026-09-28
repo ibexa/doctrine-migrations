@@ -10,6 +10,7 @@ namespace Ibexa\Tests\Bundle\DoctrineMigrations\Migrations;
 
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
+use Doctrine\DBAL\Platforms\MariaDBPlatform;
 use Doctrine\DBAL\Platforms\MySQLPlatform;
 use Doctrine\DBAL\Platforms\PostgreSQLPlatform;
 use Doctrine\DBAL\Platforms\SQLitePlatform;
@@ -22,13 +23,26 @@ use Psr\Log\NullLogger;
 
 final class AbstractSqlMigrationTest extends TestCase
 {
-    public function testIsMySQLIsTrueOnlyForMysqlPlatform(): void
+    /**
+     * @param class-string<AbstractPlatform> $platformClass
+     */
+    #[DataProvider('provideMysqlPlatformClasses')]
+    public function testIsMySQLIsTrueOnlyForMysqlOrMariaDbPlatform(string $platformClass): void
     {
-        $migration = $this->buildMigration($this->createMock(self::getMysqlPlatformClass()));
+        $migration = $this->buildMigration(self::createStub($platformClass));
 
         self::assertTrue($migration->isMySQLPublic());
         self::assertFalse($migration->isPostgreSQLPublic());
         self::assertFalse($migration->isSqlitePublic());
+    }
+
+    /**
+     * @return iterable<string, array{class-string<AbstractPlatform>}>
+     */
+    public static function provideMysqlPlatformClasses(): iterable
+    {
+        yield 'MySQL' => [self::getMysqlPlatformClass()];
+        yield 'MariaDB' => [MariaDBPlatform::class];
     }
 
     public function testIsPostgreSQLIsTrueOnlyForPostgresqlPlatform(): void
@@ -77,6 +91,7 @@ final class AbstractSqlMigrationTest extends TestCase
     public static function provideTransactionalByPlatform(): iterable
     {
         yield 'MySQL' => [self::getMysqlPlatformClass(), false];
+        yield 'MariaDB' => [MariaDBPlatform::class, false];
         yield 'PostgreSQL' => [self::getPostgresqlPlatformClass(), true];
         yield 'SQLite' => [self::getSqlitePlatformClass(), true];
     }
