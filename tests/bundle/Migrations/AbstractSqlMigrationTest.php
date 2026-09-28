@@ -54,6 +54,27 @@ final class AbstractSqlMigrationTest extends TestCase
         self::assertFalse($migration->isPlatformPublic(SqlPlatform::SQLITE));
     }
 
+    public function testIsNotTransactionalOnMysql(): void
+    {
+        $migration = $this->buildMigration($this->createMock($this->getMysqlPlatformClass()));
+
+        self::assertFalse($migration->isTransactional());
+    }
+
+    public function testIsTransactionalOnPostgresql(): void
+    {
+        $migration = $this->buildMigration($this->createMock($this->getPostgresqlPlatformClass()));
+
+        self::assertTrue($migration->isTransactional());
+    }
+
+    public function testIsTransactionalOnSqlite(): void
+    {
+        $migration = $this->buildMigration($this->createMock($this->getSqlitePlatformClass()));
+
+        self::assertTrue($migration->isTransactional());
+    }
+
     public function testAddSqlFileQueuesEachNonEmptyStatement(): void
     {
         $migration = $this->buildMigration($this->createMock($this->getMysqlPlatformClass()));
