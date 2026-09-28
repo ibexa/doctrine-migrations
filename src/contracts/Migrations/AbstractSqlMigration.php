@@ -24,6 +24,19 @@ abstract class AbstractSqlMigration extends AbstractMigration
 
     private ?SqlPlatform $resolvedPlatform = null;
 
+    /**
+     * MySQL commits implicitly on every DDL statement, so a transaction can't protect a migration
+     * there. Worse, Doctrine's executor then finds its transaction already gone and skips commit(),
+     * leaving the connection's transaction nesting level raised - so a later transaction on the same
+     * connection is only "nested", and its rollback no longer rolls anything back.
+     *
+     * Override to return true in a migration that doesn't change the schema on MySQL.
+     */
+    public function isTransactional(): bool
+    {
+        return !$this->isMySQL();
+    }
+
     final protected function isMySQL(): bool
     {
         return $this->isPlatform(SqlPlatform::MYSQL);
