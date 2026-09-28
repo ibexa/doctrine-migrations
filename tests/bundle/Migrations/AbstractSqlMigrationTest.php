@@ -20,7 +20,7 @@ final class AbstractSqlMigrationTest extends TestCase
 {
     public function testIsMySQLIsTrueOnlyForMysqlPlatform(): void
     {
-        $migration = $this->buildMigration($this->createMock($this->getMysqlPlatformClass()));
+        $migration = $this->buildMigration($this->createMock(self::getMysqlPlatformClass()));
 
         self::assertTrue($migration->isMySQLPublic());
         self::assertFalse($migration->isPostgreSQLPublic());
@@ -29,7 +29,7 @@ final class AbstractSqlMigrationTest extends TestCase
 
     public function testIsPostgreSQLIsTrueOnlyForPostgresqlPlatform(): void
     {
-        $migration = $this->buildMigration($this->createMock($this->getPostgresqlPlatformClass()));
+        $migration = $this->buildMigration($this->createMock(self::getPostgresqlPlatformClass()));
 
         self::assertTrue($migration->isPostgreSQLPublic());
         self::assertFalse($migration->isMySQLPublic());
@@ -38,7 +38,7 @@ final class AbstractSqlMigrationTest extends TestCase
 
     public function testIsSqliteIsTrueOnlyForSqlitePlatform(): void
     {
-        $migration = $this->buildMigration($this->createMock($this->getSqlitePlatformClass()));
+        $migration = $this->buildMigration($this->createMock(self::getSqlitePlatformClass()));
 
         self::assertTrue($migration->isSqlitePublic());
         self::assertFalse($migration->isMySQLPublic());
@@ -54,30 +54,33 @@ final class AbstractSqlMigrationTest extends TestCase
         self::assertFalse($migration->isPlatformPublic(SqlPlatform::SQLITE));
     }
 
-    public function testIsNotTransactionalOnMysql(): void
-    {
-        $migration = $this->buildMigration($this->createMock($this->getMysqlPlatformClass()));
+    /**
+     * @dataProvider provideTransactionalByPlatform
+     *
+     * @param class-string<AbstractPlatform> $platformClass
+     */
+    public function testIsTransactionalExceptOnMysql(
+        string $platformClass,
+        bool $expectedTransactional
+    ): void {
+        $migration = $this->buildMigration($this->createMock($platformClass));
 
-        self::assertFalse($migration->isTransactional());
+        self::assertSame($expectedTransactional, $migration->isTransactional());
     }
 
-    public function testIsTransactionalOnPostgresql(): void
+    /**
+     * @return iterable<string, array{class-string<AbstractPlatform>, bool}>
+     */
+    public static function provideTransactionalByPlatform(): iterable
     {
-        $migration = $this->buildMigration($this->createMock($this->getPostgresqlPlatformClass()));
-
-        self::assertTrue($migration->isTransactional());
-    }
-
-    public function testIsTransactionalOnSqlite(): void
-    {
-        $migration = $this->buildMigration($this->createMock($this->getSqlitePlatformClass()));
-
-        self::assertTrue($migration->isTransactional());
+        yield 'MySQL' => [self::getMysqlPlatformClass(), false];
+        yield 'PostgreSQL' => [self::getPostgresqlPlatformClass(), true];
+        yield 'SQLite' => [self::getSqlitePlatformClass(), true];
     }
 
     public function testAddSqlFileQueuesEachNonEmptyStatement(): void
     {
-        $migration = $this->buildMigration($this->createMock($this->getMysqlPlatformClass()));
+        $migration = $this->buildMigration($this->createMock(self::getMysqlPlatformClass()));
 
         $migration->addSqlFilePublic(__DIR__ . '/../Fixtures/sql/statements.sql');
 
@@ -89,7 +92,7 @@ final class AbstractSqlMigrationTest extends TestCase
 
     public function testAddSqlFileSupportsCustomDelimiter(): void
     {
-        $migration = $this->buildMigration($this->createMock($this->getMysqlPlatformClass()));
+        $migration = $this->buildMigration($this->createMock(self::getMysqlPlatformClass()));
 
         $migration->addSqlFilePublic(__DIR__ . '/../Fixtures/sql/custom-delimiter-statements.sql', '-- @@');
 
@@ -101,7 +104,7 @@ final class AbstractSqlMigrationTest extends TestCase
 
     public function testAddSqlFileThrowsWhenFileDoesNotExist(): void
     {
-        $migration = $this->buildMigration($this->createMock($this->getMysqlPlatformClass()));
+        $migration = $this->buildMigration($this->createMock(self::getMysqlPlatformClass()));
 
         $this->expectException(\RuntimeException::class);
 
@@ -110,7 +113,7 @@ final class AbstractSqlMigrationTest extends TestCase
 
     public function testAbortIfUnsupportedPlatformDoesNotThrowWhenPlatformIsSupported(): void
     {
-        $migration = $this->buildMigration($this->createMock($this->getPostgresqlPlatformClass()));
+        $migration = $this->buildMigration($this->createMock(self::getPostgresqlPlatformClass()));
 
         $migration->abortIfUnsupportedPlatformPublic(SqlPlatform::MYSQL, SqlPlatform::POSTGRESQL, SqlPlatform::SQLITE);
 
@@ -119,7 +122,7 @@ final class AbstractSqlMigrationTest extends TestCase
 
     public function testAbortIfUnsupportedPlatformThrowsWhenPlatformIsNotInGivenList(): void
     {
-        $migration = $this->buildMigration($this->createMock($this->getPostgresqlPlatformClass()));
+        $migration = $this->buildMigration($this->createMock(self::getPostgresqlPlatformClass()));
 
         $this->expectException(AbortMigration::class);
         $this->expectExceptionMessage('Unsupported database platform. This migration only supports: mysql, sqlite.');
@@ -158,7 +161,7 @@ final class AbstractSqlMigrationTest extends TestCase
     /**
      * @return class-string<AbstractPlatform>
      */
-    private function getMysqlPlatformClass(): string
+    private static function getMysqlPlatformClass(): string
     {
         // DBAL 2 uses MySqlPlatform; DBAL 3 renamed it to MySQLPlatform
         return class_exists('Doctrine\\DBAL\\Platforms\\MySqlPlatform')
@@ -169,7 +172,7 @@ final class AbstractSqlMigrationTest extends TestCase
     /**
      * @return class-string<AbstractPlatform>
      */
-    private function getPostgresqlPlatformClass(): string
+    private static function getPostgresqlPlatformClass(): string
     {
         // DBAL 2 uses PostgreSqlPlatform; DBAL 3 renamed it to PostgreSQLPlatform
         return class_exists('Doctrine\\DBAL\\Platforms\\PostgreSqlPlatform')
@@ -180,7 +183,7 @@ final class AbstractSqlMigrationTest extends TestCase
     /**
      * @return class-string<AbstractPlatform>
      */
-    private function getSqlitePlatformClass(): string
+    private static function getSqlitePlatformClass(): string
     {
         // Earlier DBAL releases use SqlitePlatform; later DBAL 3 releases renamed it to SQLitePlatform
         return class_exists('Doctrine\\DBAL\\Platforms\\SqlitePlatform')
