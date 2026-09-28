@@ -16,6 +16,7 @@ use Doctrine\DBAL\Platforms\SqlitePlatform;
 use Doctrine\Migrations\Exception\AbortMigration;
 use Ibexa\DoctrineMigrations\Migration\SqlPlatform;
 use Ibexa\Tests\Bundle\DoctrineMigrations\Fixtures\ConcreteAbstractSqlMigration;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 
@@ -58,10 +59,9 @@ final class AbstractSqlMigrationTest extends TestCase
     }
 
     /**
-     * @dataProvider provideTransactionalByPlatform
-     *
      * @param class-string<AbstractPlatform> $platformClass
      */
+    #[DataProvider('provideTransactionalByPlatform')]
     public function testIsTransactionalExceptOnMysql(
         string $platformClass,
         bool $expectedTransactional
