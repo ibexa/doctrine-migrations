@@ -41,12 +41,12 @@ final class DatabasePlatformResolverTest extends TestCase
 
     public function testResolveReturnsPostgresqlIdentifier(): void
     {
-        self::assertSame(SqlPlatform::POSTGRESQL, DatabasePlatformResolver::resolve($this->buildConnection($this->getPostgresqlPlatformClass())));
+        self::assertSame(SqlPlatform::POSTGRESQL, DatabasePlatformResolver::resolve($this->buildConnection(PostgreSQLPlatform::class)));
     }
 
     public function testResolveReturnsSqliteIdentifier(): void
     {
-        self::assertSame(SqlPlatform::SQLITE, DatabasePlatformResolver::resolve($this->buildConnection($this->getSqlitePlatformClass())));
+        self::assertSame(SqlPlatform::SQLITE, DatabasePlatformResolver::resolve($this->buildConnection(SQLitePlatform::class)));
     }
 
     public function testResolveReturnsNullForUnsupportedPlatform(): void
@@ -63,21 +63,5 @@ final class DatabasePlatformResolverTest extends TestCase
         $connection->method('getDatabasePlatform')->willReturn(self::createStub($platformClass));
 
         return $connection;
-    }
-
-    /**
-     * @return class-string<AbstractPlatform>
-     */
-    private function getPostgresqlPlatformClass(): string
-    {
-        return PostgreSQLPlatform::class;
-    }
-
-    /**
-     * @return class-string<AbstractPlatform>
-     */
-    private function getSqlitePlatformClass(): string
-    {
-        return SQLitePlatform::class;
     }
 }
