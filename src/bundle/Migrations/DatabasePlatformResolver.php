@@ -9,6 +9,9 @@ declare(strict_types=1);
 namespace Ibexa\Bundle\DoctrineMigrations\Migrations;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
+use Doctrine\DBAL\Platforms\PostgreSQLPlatform;
+use Doctrine\DBAL\Platforms\SQLitePlatform;
 use Ibexa\DoctrineMigrations\Migration\SqlPlatform;
 
 /**
@@ -21,25 +24,16 @@ final class DatabasePlatformResolver
     {
         $platform = $connection->getDatabasePlatform();
 
-        // DBAL 3 renamed these platform classes; DBAL 2 uses the original names.
-        $mysqlClass = class_exists('Doctrine\\DBAL\\Platforms\\MySQLPlatform')
-            ? 'Doctrine\\DBAL\\Platforms\\MySQLPlatform'
-            : 'Doctrine\\DBAL\\Platforms\\MySqlPlatform';
-        if ($platform instanceof $mysqlClass) {
+        // Not MySQLPlatform: as of DBAL 4, MariaDBPlatform extends only AbstractMySQLPlatform.
+        if ($platform instanceof AbstractMySQLPlatform) {
             return SqlPlatform::MYSQL;
         }
 
-        $postgresqlClass = class_exists('Doctrine\\DBAL\\Platforms\\PostgreSQLPlatform')
-            ? 'Doctrine\\DBAL\\Platforms\\PostgreSQLPlatform'
-            : 'Doctrine\\DBAL\\Platforms\\PostgreSqlPlatform';
-        if ($platform instanceof $postgresqlClass) {
+        if ($platform instanceof PostgreSQLPlatform) {
             return SqlPlatform::POSTGRESQL;
         }
 
-        $sqliteClass = class_exists('Doctrine\\DBAL\\Platforms\\SQLitePlatform')
-            ? 'Doctrine\\DBAL\\Platforms\\SQLitePlatform'
-            : 'Doctrine\\DBAL\\Platforms\\SQLitePlatform';
-        if ($platform instanceof $sqliteClass) {
+        if ($platform instanceof SQLitePlatform) {
             return SqlPlatform::SQLITE;
         }
 
