@@ -9,7 +9,7 @@ declare(strict_types=1);
 namespace Ibexa\Contracts\DoctrineMigrations\Migrations;
 
 use Doctrine\Migrations\AbstractMigration;
-use Ibexa\Bundle\DoctrineMigrations\Migrations\DatabasePlatformResolver;
+use Ibexa\Contracts\DoctrineSchema\Database\DatabasePlatformResolver;
 use Ibexa\DoctrineMigrations\Migration\SqlPlatform;
 
 /**
@@ -115,6 +115,6 @@ abstract class AbstractSqlMigration extends AbstractMigration
 
     private function resolvePlatform(): ?string
     {
-        return $this->resolvedPlatform ??= DatabasePlatformResolver::resolve($this->connection);
+        return $this->resolvedPlatform ??= DatabasePlatformResolver::resolveName($this->connection->getDatabasePlatform());
     }
 }

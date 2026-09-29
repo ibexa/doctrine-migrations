@@ -8,17 +8,19 @@ declare(strict_types=1);
 
 namespace Ibexa\DoctrineMigrations\Migration;
 
+use Ibexa\Contracts\DoctrineSchema\Database\DatabasePlatformName;
+
 /**
  * The database platform identifiers recognized across the Doctrine Migrations integration
- * (see {@see Ibexa\Bundle\DoctrineMigrations\Migrations\DatabasePlatformResolver}).
+ * (see {@see Ibexa\Contracts\DoctrineSchema\Database\DatabasePlatformResolver}).
  */
 final class SqlPlatform
 {
-    public const MYSQL = 'mysql';
+    public const MYSQL = DatabasePlatformName::MYSQL;
 
-    public const POSTGRESQL = 'postgresql';
+    public const POSTGRESQL = DatabasePlatformName::POSTGRESQL;
 
-    public const SQLITE = 'sqlite';
+    public const SQLITE = DatabasePlatformName::SQLITE;
 
     /**
      * @return list<string>
