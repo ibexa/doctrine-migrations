@@ -9,8 +9,8 @@ declare(strict_types=1);
 namespace Ibexa\Contracts\DoctrineMigrations\Migrations;
 
 use Doctrine\Migrations\AbstractMigration;
+use Ibexa\Contracts\DoctrineSchema\Database\DatabasePlatformName;
 use Ibexa\Contracts\DoctrineSchema\Database\DatabasePlatformResolver;
-use Ibexa\DoctrineMigrations\Migration\SqlPlatform;
 
 /**
  * Base class for Ibexa migrations that build their SQL per database platform, providing
@@ -39,21 +39,21 @@ abstract class AbstractSqlMigration extends AbstractMigration
 
     final protected function isMySQL(): bool
     {
-        return $this->isPlatform(SqlPlatform::MYSQL);
+        return $this->isPlatform(DatabasePlatformName::MYSQL);
     }
 
     final protected function isPostgreSQL(): bool
     {
-        return $this->isPlatform(SqlPlatform::POSTGRESQL);
+        return $this->isPlatform(DatabasePlatformName::POSTGRESQL);
     }
 
     final protected function isSqlite(): bool
     {
-        return $this->isPlatform(SqlPlatform::SQLITE);
+        return $this->isPlatform(DatabasePlatformName::SQLITE);
     }
 
     /**
-     * @param string $platform one of {@see SqlPlatform}'s constants
+     * @param string $platform one of {@see DatabasePlatformName}'s constants
      */
     final protected function isPlatform(string $platform): bool
     {
@@ -91,10 +91,10 @@ abstract class AbstractSqlMigration extends AbstractMigration
 
     /**
      * Aborts the migration with a clear error message unless the current connection is one of
-     * the given platform identifiers (see {@see SqlPlatform}'s constants) — e.g.
-     * `$this->abortIfUnsupportedPlatform(SqlPlatform::MYSQL, SqlPlatform::POSTGRESQL, SqlPlatform::SQLITE);`.
+     * the given platform identifiers (see {@see DatabasePlatformName}'s constants) — e.g.
+     * `$this->abortIfUnsupportedPlatform(DatabasePlatformName::MYSQL, DatabasePlatformName::POSTGRESQL, DatabasePlatformName::SQLITE);`.
      *
-     * @param string ...$supportedPlatforms one or more of {@see SqlPlatform}'s constants
+     * @param string ...$supportedPlatforms one or more of {@see DatabasePlatformName}'s constants
      */
     final protected function abortIfUnsupportedPlatform(string ...$supportedPlatforms): void
     {
