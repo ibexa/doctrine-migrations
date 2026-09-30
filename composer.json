@@ -12,6 +12,7 @@
         "php": ">=7.4",
         "doctrine/dbal": "^2.13 || ^3.0",
         "doctrine/migrations": "^3.1",
+        "ibexa/doctrine-schema": "~4.6.x-dev",
         "psr/log": "^1.0 || ^2.0 || ^3.0",
         "symfony/dependency-injection": "^5.4",
         "symfony/http-kernel": "^5.4",
