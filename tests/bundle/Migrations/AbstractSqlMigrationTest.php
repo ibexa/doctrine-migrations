@@ -14,7 +14,7 @@ use Doctrine\DBAL\Platforms\MySQLPlatform;
 use Doctrine\DBAL\Platforms\PostgreSQLPlatform;
 use Doctrine\DBAL\Platforms\SqlitePlatform;
 use Doctrine\Migrations\Exception\AbortMigration;
-use Ibexa\DoctrineMigrations\Migration\SqlPlatform;
+use Ibexa\Contracts\DoctrineSchema\Database\DatabasePlatformName;
 use Ibexa\Tests\Bundle\DoctrineMigrations\Fixtures\ConcreteAbstractSqlMigration;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -53,9 +53,9 @@ final class AbstractSqlMigrationTest extends TestCase
     {
         $migration = $this->buildMigration($this->createMock(AbstractPlatform::class));
 
-        self::assertFalse($migration->isPlatformPublic(SqlPlatform::MYSQL));
-        self::assertFalse($migration->isPlatformPublic(SqlPlatform::POSTGRESQL));
-        self::assertFalse($migration->isPlatformPublic(SqlPlatform::SQLITE));
+        self::assertFalse($migration->isPlatformPublic(DatabasePlatformName::MySQL));
+        self::assertFalse($migration->isPlatformPublic(DatabasePlatformName::PostgreSQL));
+        self::assertFalse($migration->isPlatformPublic(DatabasePlatformName::SQLite));
     }
 
     /**
@@ -118,7 +118,7 @@ final class AbstractSqlMigrationTest extends TestCase
     {
         $migration = $this->buildMigration($this->createMock(self::getPostgresqlPlatformClass()));
 
-        $migration->abortIfUnsupportedPlatformPublic(SqlPlatform::MYSQL, SqlPlatform::POSTGRESQL, SqlPlatform::SQLITE);
+        $migration->abortIfUnsupportedPlatformPublic(DatabasePlatformName::MySQL, DatabasePlatformName::PostgreSQL, DatabasePlatformName::SQLite);
 
         self::assertSame([], $this->getQueuedStatements($migration));
     }
@@ -130,7 +130,7 @@ final class AbstractSqlMigrationTest extends TestCase
         $this->expectException(AbortMigration::class);
         $this->expectExceptionMessage('Unsupported database platform. This migration only supports: mysql, sqlite.');
 
-        $migration->abortIfUnsupportedPlatformPublic(SqlPlatform::MYSQL, SqlPlatform::SQLITE);
+        $migration->abortIfUnsupportedPlatformPublic(DatabasePlatformName::MySQL, DatabasePlatformName::SQLite);
     }
 
     public function testAbortIfUnsupportedPlatformThrowsWhenPlatformIsCompletelyUnsupported(): void
@@ -139,7 +139,7 @@ final class AbstractSqlMigrationTest extends TestCase
 
         $this->expectException(AbortMigration::class);
 
-        $migration->abortIfUnsupportedPlatformPublic(SqlPlatform::MYSQL, SqlPlatform::POSTGRESQL, SqlPlatform::SQLITE);
+        $migration->abortIfUnsupportedPlatformPublic(DatabasePlatformName::MySQL, DatabasePlatformName::PostgreSQL, DatabasePlatformName::SQLite);
     }
 
     /**

@@ -9,8 +9,8 @@ declare(strict_types=1);
 namespace Ibexa\Contracts\DoctrineMigrations\Migrations;
 
 use Doctrine\Migrations\AbstractMigration;
-use Ibexa\Bundle\DoctrineMigrations\Migrations\DatabasePlatformResolver;
-use Ibexa\DoctrineMigrations\Migration\SqlPlatform;
+use Ibexa\Contracts\DoctrineSchema\Database\DatabasePlatformName;
+use Ibexa\Contracts\DoctrineSchema\Database\DatabasePlatformResolver;
 
 /**
  * Base class for Ibexa migrations that build their SQL per database platform, providing
@@ -22,7 +22,7 @@ abstract class AbstractSqlMigration extends AbstractMigration
 {
     public const DEFAULT_SQL_STATEMENT_DELIMITER = '-- ibexa:sql-statement-separator';
 
-    private ?SqlPlatform $resolvedPlatform = null;
+    private ?DatabasePlatformName $resolvedPlatform = null;
 
     /**
      * MySQL commits implicitly on every DDL statement, so a transaction can't protect a migration
@@ -39,20 +39,20 @@ abstract class AbstractSqlMigration extends AbstractMigration
 
     final protected function isMySQL(): bool
     {
-        return $this->isPlatform(SqlPlatform::MYSQL);
+        return $this->isPlatform(DatabasePlatformName::MySQL);
     }
 
     final protected function isPostgreSQL(): bool
     {
-        return $this->isPlatform(SqlPlatform::POSTGRESQL);
+        return $this->isPlatform(DatabasePlatformName::PostgreSQL);
     }
 
     final protected function isSqlite(): bool
     {
-        return $this->isPlatform(SqlPlatform::SQLITE);
+        return $this->isPlatform(DatabasePlatformName::SQLite);
     }
 
-    final protected function isPlatform(SqlPlatform $platform): bool
+    final protected function isPlatform(DatabasePlatformName $platform): bool
     {
         return $this->resolvePlatform() === $platform;
     }
@@ -89,9 +89,9 @@ abstract class AbstractSqlMigration extends AbstractMigration
     /**
      * Aborts the migration with a clear error message unless the current connection is one of
      * the given platforms — e.g.
-     * `$this->abortIfUnsupportedPlatform(SqlPlatform::MYSQL, SqlPlatform::POSTGRESQL, SqlPlatform::SQLITE);`.
+     * `$this->abortIfUnsupportedPlatform(DatabasePlatformName::MySQL, DatabasePlatformName::PostgreSQL, DatabasePlatformName::SQLite);`.
      */
-    final protected function abortIfUnsupportedPlatform(SqlPlatform ...$supportedPlatforms): void
+    final protected function abortIfUnsupportedPlatform(DatabasePlatformName ...$supportedPlatforms): void
     {
         foreach ($supportedPlatforms as $platform) {
             if ($this->isPlatform($platform)) {
@@ -104,15 +104,15 @@ abstract class AbstractSqlMigration extends AbstractMigration
             sprintf(
                 'Unsupported database platform. This migration only supports: %s.',
                 implode(', ', array_map(
-                    static fn (SqlPlatform $platform): string => $platform->value,
+                    static fn (DatabasePlatformName $platform): string => $platform->value,
                     $supportedPlatforms
                 ))
             )
         );
     }
 
-    private function resolvePlatform(): ?SqlPlatform
+    private function resolvePlatform(): ?DatabasePlatformName
     {
-        return $this->resolvedPlatform ??= DatabasePlatformResolver::resolve($this->connection);
+        return $this->resolvedPlatform ??= DatabasePlatformResolver::resolveName($this->connection->getDatabasePlatform());
     }
 }

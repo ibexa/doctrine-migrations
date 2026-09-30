@@ -10,7 +10,7 @@ namespace Ibexa\Tests\Bundle\DoctrineMigrations\Fixtures;
 
 use Doctrine\DBAL\Schema\Schema;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\AbstractSqlMigration;
-use Ibexa\DoctrineMigrations\Migration\SqlPlatform;
+use Ibexa\Contracts\DoctrineSchema\Database\DatabasePlatformName;
 
 final class ConcreteAbstractSqlMigration extends AbstractSqlMigration
 {
@@ -36,7 +36,7 @@ final class ConcreteAbstractSqlMigration extends AbstractSqlMigration
         return $this->isSqlite();
     }
 
-    public function isPlatformPublic(SqlPlatform $platform): bool
+    public function isPlatformPublic(DatabasePlatformName $platform): bool
     {
         return $this->isPlatform($platform);
     }
@@ -51,7 +51,7 @@ final class ConcreteAbstractSqlMigration extends AbstractSqlMigration
         $this->addSqlFile($file, $delimiter);
     }
 
-    public function abortIfUnsupportedPlatformPublic(SqlPlatform ...$supportedPlatforms): void
+    public function abortIfUnsupportedPlatformPublic(DatabasePlatformName ...$supportedPlatforms): void
     {
         $this->abortIfUnsupportedPlatform(...$supportedPlatforms);
     }
