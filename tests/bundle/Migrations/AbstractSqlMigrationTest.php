@@ -15,7 +15,7 @@ use Doctrine\DBAL\Platforms\MySQLPlatform;
 use Doctrine\DBAL\Platforms\PostgreSQLPlatform;
 use Doctrine\DBAL\Platforms\SQLitePlatform;
 use Doctrine\Migrations\Exception\AbortMigration;
-use Ibexa\Contracts\DoctrineSchema\Database\DatabasePlatformName;
+use Ibexa\Contracts\DoctrineMigrations\Migrations\SqlPlatform;
 use Ibexa\Tests\Bundle\DoctrineMigrations\Fixtures\ConcreteAbstractSqlMigration;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -26,57 +26,45 @@ final class AbstractSqlMigrationTest extends TestCase
     /**
      * @param class-string<AbstractPlatform> $platformClass
      */
-    #[DataProvider('provideMysqlPlatformClasses')]
-    public function testIsMySQLIsTrueOnlyForMysqlOrMariaDbPlatform(string $platformClass): void
-    {
+    #[DataProvider('providePlatformByPlatformClass')]
+    public function testPlatformCheckIsTrueOnlyForItsOwnPlatform(
+        string $platformClass,
+        SqlPlatform $expectedPlatform
+    ): void {
         $migration = $this->buildMigration(self::createStub($platformClass));
 
-        self::assertTrue($migration->isMySQLPublic());
-        self::assertFalse($migration->isPostgreSQLPublic());
-        self::assertFalse($migration->isSqlitePublic());
+        self::assertSame($expectedPlatform === SqlPlatform::MYSQL, $migration->isMySQLPublic());
+        self::assertSame($expectedPlatform === SqlPlatform::MARIADB, $migration->isMariaDBPublic());
+        self::assertSame($expectedPlatform === SqlPlatform::POSTGRESQL, $migration->isPostgreSQLPublic());
+        self::assertSame($expectedPlatform === SqlPlatform::SQLITE, $migration->isSqlitePublic());
     }
 
     /**
-     * @return iterable<string, array{class-string<AbstractPlatform>}>
+     * @return iterable<string, array{class-string<AbstractPlatform>, SqlPlatform}>
      */
-    public static function provideMysqlPlatformClasses(): iterable
+    public static function providePlatformByPlatformClass(): iterable
     {
-        yield 'MySQL' => [MySQLPlatform::class];
-        yield 'MariaDB' => [MariaDBPlatform::class];
-    }
-
-    public function testIsPostgreSQLIsTrueOnlyForPostgresqlPlatform(): void
-    {
-        $migration = $this->buildMigration(self::createStub(PostgreSQLPlatform::class));
-
-        self::assertTrue($migration->isPostgreSQLPublic());
-        self::assertFalse($migration->isMySQLPublic());
-        self::assertFalse($migration->isSqlitePublic());
-    }
-
-    public function testIsSqliteIsTrueOnlyForSqlitePlatform(): void
-    {
-        $migration = $this->buildMigration(self::createStub(SQLitePlatform::class));
-
-        self::assertTrue($migration->isSqlitePublic());
-        self::assertFalse($migration->isMySQLPublic());
-        self::assertFalse($migration->isPostgreSQLPublic());
+        yield 'MySQL' => [MySQLPlatform::class, SqlPlatform::MYSQL];
+        yield 'MariaDB' => [MariaDBPlatform::class, SqlPlatform::MARIADB];
+        yield 'PostgreSQL' => [PostgreSQLPlatform::class, SqlPlatform::POSTGRESQL];
+        yield 'SQLite' => [SQLitePlatform::class, SqlPlatform::SQLITE];
     }
 
     public function testIsPlatformReturnsFalseForUnsupportedPlatform(): void
     {
         $migration = $this->buildMigration(self::createStub(AbstractPlatform::class));
 
-        self::assertFalse($migration->isPlatformPublic(DatabasePlatformName::MySQL));
-        self::assertFalse($migration->isPlatformPublic(DatabasePlatformName::PostgreSQL));
-        self::assertFalse($migration->isPlatformPublic(DatabasePlatformName::SQLite));
+        self::assertFalse($migration->isPlatformPublic(SqlPlatform::MYSQL));
+        self::assertFalse($migration->isPlatformPublic(SqlPlatform::MARIADB));
+        self::assertFalse($migration->isPlatformPublic(SqlPlatform::POSTGRESQL));
+        self::assertFalse($migration->isPlatformPublic(SqlPlatform::SQLITE));
     }
 
     /**
      * @param class-string<AbstractPlatform> $platformClass
      */
     #[DataProvider('provideTransactionalByPlatform')]
-    public function testIsTransactionalExceptOnMysql(
+    public function testIsTransactionalExceptOnMysqlAndMariadb(
         string $platformClass,
         bool $expectedTransactional
     ): void {
@@ -133,7 +121,7 @@ final class AbstractSqlMigrationTest extends TestCase
     {
         $migration = $this->buildMigration(self::createStub(PostgreSQLPlatform::class));
 
-        $migration->abortIfUnsupportedPlatformPublic(DatabasePlatformName::MySQL, DatabasePlatformName::PostgreSQL, DatabasePlatformName::SQLite);
+        $migration->abortIfUnsupportedPlatformPublic(SqlPlatform::MYSQL, SqlPlatform::POSTGRESQL, SqlPlatform::SQLITE);
 
         self::assertSame([], $this->getQueuedStatements($migration));
     }
@@ -145,7 +133,26 @@ final class AbstractSqlMigrationTest extends TestCase
         $this->expectException(AbortMigration::class);
         $this->expectExceptionMessage('Unsupported database platform. This migration only supports: mysql, sqlite.');
 
-        $migration->abortIfUnsupportedPlatformPublic(DatabasePlatformName::MySQL, DatabasePlatformName::SQLite);
+        $migration->abortIfUnsupportedPlatformPublic(SqlPlatform::MYSQL, SqlPlatform::SQLITE);
+    }
+
+    public function testAbortIfUnsupportedPlatformDoesNotTreatMariadbAsMysql(): void
+    {
+        $migration = $this->buildMigration(self::createStub(MariaDBPlatform::class));
+
+        $this->expectException(AbortMigration::class);
+        $this->expectExceptionMessage('Unsupported database platform. This migration only supports: mysql, postgresql, sqlite.');
+
+        $migration->abortIfUnsupportedPlatformPublic(SqlPlatform::MYSQL, SqlPlatform::POSTGRESQL, SqlPlatform::SQLITE);
+    }
+
+    public function testAbortIfUnsupportedPlatformDoesNotThrowWhenMariadbIsListed(): void
+    {
+        $migration = $this->buildMigration(self::createStub(MariaDBPlatform::class));
+
+        $migration->abortIfUnsupportedPlatformPublic(SqlPlatform::MYSQL, SqlPlatform::MARIADB);
+
+        self::assertSame([], $this->getQueuedStatements($migration));
     }
 
     public function testAbortIfUnsupportedPlatformThrowsWhenPlatformIsCompletelyUnsupported(): void
@@ -154,7 +161,7 @@ final class AbstractSqlMigrationTest extends TestCase
 
         $this->expectException(AbortMigration::class);
 
-        $migration->abortIfUnsupportedPlatformPublic(DatabasePlatformName::MySQL, DatabasePlatformName::PostgreSQL, DatabasePlatformName::SQLite);
+        $migration->abortIfUnsupportedPlatformPublic(SqlPlatform::MYSQL, SqlPlatform::POSTGRESQL, SqlPlatform::SQLITE);
     }
 
     /**
