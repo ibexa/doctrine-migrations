@@ -25,6 +25,11 @@ final class ConcreteAbstractSqlMigration extends AbstractSqlMigration
         return $this->isMySQL();
     }
 
+    public function isMariaDBPublic(): bool
+    {
+        return $this->isMariaDB();
+    }
+
     public function isPostgreSQLPublic(): bool
     {
         return $this->isPostgreSQL();
