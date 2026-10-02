@@ -70,7 +70,7 @@ final class IbexaMigrationComparatorTest extends TestCase
     public function testTwoNonIbexaMigrationsDelegateToFallbackComparator(): void
     {
         $fallback = $this->createMock(Comparator::class);
-        $fallback->expects(self::once())
+        $fallback->expects($this->once())
             ->method('compare')
             ->willReturn(42);
 

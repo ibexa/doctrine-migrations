@@ -132,7 +132,7 @@ final class ServiceMigrationsRepositoryTest extends TestCase
         $container = $this->createMock(ServiceProviderInterface::class);
         $container->method('has')->with(self::MIGRATION_ID)->willReturn(true);
         // get() must only be called once even if getMigration() is called twice
-        $container->expects(self::once())
+        $container->expects($this->once())
             ->method('get')
             ->with(self::MIGRATION_ID)
             ->willReturn($migration);
