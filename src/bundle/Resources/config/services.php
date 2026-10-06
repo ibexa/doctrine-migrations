@@ -14,6 +14,7 @@ use Doctrine\Migrations\MigrationsRepository;
 use Doctrine\Migrations\Version\Comparator;
 use Ibexa\Bundle\DoctrineMigrations\Comparator\IbexaMigrationComparator;
 use Ibexa\Bundle\DoctrineMigrations\Configuration\IbexaMigrationConfigurationFactory;
+use Ibexa\Bundle\DoctrineMigrations\EventSubscriber\SchemaAssetsFilterSubscriber;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaOnlyDependencyFactory;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaOnlyMigrationsRepository;
 use Ibexa\DoctrineMigrations\Migration\ServiceMigrationsRepository;
@@ -63,4 +64,10 @@ return static function (ContainerConfigurator $containerConfigurator): void {
         ->call('setService', [Comparator::class, service(IbexaMigrationComparator::class)]);
 
     $services->set(IbexaMigrationComparator::class);
+
+    // ibexa/core's ManagedTablesSchemaAssetFilter would otherwise hide the migrations' own table,
+    // and every table no ORM entity maps, from the "ibexa:doctrine:migrations:*" commands.
+    $services->set(SchemaAssetsFilterSubscriber::class)
+        ->args([service('ibexa.persistence.connection')])
+        ->tag('kernel.event_subscriber');
 };
