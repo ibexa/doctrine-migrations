@@ -28,7 +28,7 @@ final class SchemaAssetsFilterSubscriber implements EventSubscriberInterface
 {
     private const string COMMAND_PREFIX = 'ibexa:doctrine:migrations:';
 
-    /** @var callable|null the filter to put back, while it's lifted */
+    /** @var (callable(string): bool)|null the filter to put back, while it's lifted */
     private $previousFilter;
 
     public function __construct(private readonly Connection $connection) {}
