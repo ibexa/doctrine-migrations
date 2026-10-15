@@ -18,49 +18,37 @@ use Psr\Log\NullLogger;
 
 final class AbstractSqlMigrationTest extends TestCase
 {
-    public function testIsMySQLIsTrueOnlyForMysqlPlatform(): void
-    {
-        $migration = $this->buildMigration($this->createMock(self::getMysqlPlatformClass()));
+    /**
+     * @dataProvider providePlatformByPlatformClass
+     *
+     * @param class-string<AbstractPlatform> $platformClass
+     */
+    public function testPlatformCheckIsTrueOnlyForItsOwnPlatform(
+        string $platformClass,
+        string $expectedPlatform
+    ): void {
+        $migration = $this->buildMigration($this->createStub($platformClass));
 
-        self::assertTrue($migration->isMySQLPublic());
-        self::assertFalse($migration->isMariaDBPublic());
-        self::assertFalse($migration->isPostgreSQLPublic());
-        self::assertFalse($migration->isSqlitePublic());
+        self::assertSame($expectedPlatform === SqlPlatform::MYSQL, $migration->isMySQLPublic());
+        self::assertSame($expectedPlatform === SqlPlatform::MARIADB, $migration->isMariaDBPublic());
+        self::assertSame($expectedPlatform === SqlPlatform::POSTGRESQL, $migration->isPostgreSQLPublic());
+        self::assertSame($expectedPlatform === SqlPlatform::SQLITE, $migration->isSqlitePublic());
     }
 
-    public function testIsMariaDBIsTrueOnlyForMariadbPlatform(): void
+    /**
+     * @return iterable<string, array{class-string<AbstractPlatform>, string}>
+     */
+    public static function providePlatformByPlatformClass(): iterable
     {
-        $migration = $this->buildMigration($this->createMock(self::getMariadbPlatformClass()));
-
-        self::assertTrue($migration->isMariaDBPublic());
-        self::assertFalse($migration->isMySQLPublic());
-        self::assertFalse($migration->isPostgreSQLPublic());
-        self::assertFalse($migration->isSqlitePublic());
-    }
-
-    public function testIsPostgreSQLIsTrueOnlyForPostgresqlPlatform(): void
-    {
-        $migration = $this->buildMigration($this->createMock(self::getPostgresqlPlatformClass()));
-
-        self::assertTrue($migration->isPostgreSQLPublic());
-        self::assertFalse($migration->isMySQLPublic());
-        self::assertFalse($migration->isMariaDBPublic());
-        self::assertFalse($migration->isSqlitePublic());
-    }
-
-    public function testIsSqliteIsTrueOnlyForSqlitePlatform(): void
-    {
-        $migration = $this->buildMigration($this->createMock(self::getSqlitePlatformClass()));
-
-        self::assertTrue($migration->isSqlitePublic());
-        self::assertFalse($migration->isMySQLPublic());
-        self::assertFalse($migration->isMariaDBPublic());
-        self::assertFalse($migration->isPostgreSQLPublic());
+        yield 'MySQL' => [self::getMysqlPlatformClass(), SqlPlatform::MYSQL];
+        yield 'MariaDB' => [self::getMariadbPlatformClass(), SqlPlatform::MARIADB];
+        yield 'PostgreSQL' => [self::getPostgresqlPlatformClass(), SqlPlatform::POSTGRESQL];
+        yield 'SQLite' => [self::getSqlitePlatformClass(), SqlPlatform::SQLITE];
     }
 
     public function testIsPlatformReturnsFalseForUnsupportedPlatform(): void
     {
-        $migration = $this->buildMigration($this->createMock(AbstractPlatform::class));
+        $migration = $this->buildMigration($this->createStub(AbstractPlatform::class));
 
         self::assertFalse($migration->isPlatformPublic(SqlPlatform::MYSQL));
         self::assertFalse($migration->isPlatformPublic(SqlPlatform::MARIADB));
@@ -77,7 +65,7 @@ final class AbstractSqlMigrationTest extends TestCase
         string $platformClass,
         bool $expectedTransactional
     ): void {
-        $migration = $this->buildMigration($this->createMock($platformClass));
+        $migration = $this->buildMigration($this->createStub($platformClass));
 
         self::assertSame($expectedTransactional, $migration->isTransactional());
     }
@@ -95,7 +83,7 @@ final class AbstractSqlMigrationTest extends TestCase
 
     public function testAddSqlFileQueuesEachNonEmptyStatement(): void
     {
-        $migration = $this->buildMigration($this->createMock(self::getMysqlPlatformClass()));
+        $migration = $this->buildMigration($this->createStub(self::getMysqlPlatformClass()));
 
         $migration->addSqlFilePublic(__DIR__ . '/../Fixtures/sql/statements.sql');
 
@@ -107,7 +95,7 @@ final class AbstractSqlMigrationTest extends TestCase
 
     public function testAddSqlFileSupportsCustomDelimiter(): void
     {
-        $migration = $this->buildMigration($this->createMock(self::getMysqlPlatformClass()));
+        $migration = $this->buildMigration($this->createStub(self::getMysqlPlatformClass()));
 
         $migration->addSqlFilePublic(__DIR__ . '/../Fixtures/sql/custom-delimiter-statements.sql', '-- @@');
 
@@ -119,58 +107,87 @@ final class AbstractSqlMigrationTest extends TestCase
 
     public function testAddSqlFileThrowsWhenFileDoesNotExist(): void
     {
-        $migration = $this->buildMigration($this->createMock(self::getMysqlPlatformClass()));
+        $migration = $this->buildMigration($this->createStub(self::getMysqlPlatformClass()));
 
         $this->expectException(\RuntimeException::class);
 
         $migration->addSqlFilePublic(__DIR__ . '/../Fixtures/sql/does-not-exist.sql');
     }
 
-    public function testAbortIfUnsupportedPlatformDoesNotThrowWhenPlatformIsSupported(): void
-    {
-        $migration = $this->buildMigration($this->createMock(self::getPostgresqlPlatformClass()));
+    /**
+     * @dataProvider provideSupportedPlatforms
+     *
+     * @param class-string<AbstractPlatform> $platformClass
+     * @param list<string> $supportedPlatforms
+     */
+    public function testAbortIfUnsupportedPlatformDoesNotThrowWhenPlatformIsSupported(
+        string $platformClass,
+        array $supportedPlatforms
+    ): void {
+        $migration = $this->buildMigration($this->createStub($platformClass));
 
-        $migration->abortIfUnsupportedPlatformPublic(SqlPlatform::MYSQL, SqlPlatform::POSTGRESQL, SqlPlatform::SQLITE);
-
-        self::assertSame([], $this->getQueuedStatements($migration));
-    }
-
-    public function testAbortIfUnsupportedPlatformThrowsWhenPlatformIsNotInGivenList(): void
-    {
-        $migration = $this->buildMigration($this->createMock(self::getPostgresqlPlatformClass()));
-
-        $this->expectException(AbortMigration::class);
-        $this->expectExceptionMessage('Unsupported database platform. This migration only supports: mysql, sqlite.');
-
-        $migration->abortIfUnsupportedPlatformPublic(SqlPlatform::MYSQL, SqlPlatform::SQLITE);
-    }
-
-    public function testAbortIfUnsupportedPlatformDoesNotTreatMariadbAsMysql(): void
-    {
-        $migration = $this->buildMigration($this->createMock(self::getMariadbPlatformClass()));
-
-        $this->expectException(AbortMigration::class);
-        $this->expectExceptionMessage('Unsupported database platform. This migration only supports: mysql, postgresql, sqlite.');
-
-        $migration->abortIfUnsupportedPlatformPublic(SqlPlatform::MYSQL, SqlPlatform::POSTGRESQL, SqlPlatform::SQLITE);
-    }
-
-    public function testAbortIfUnsupportedPlatformDoesNotThrowWhenMariadbIsListed(): void
-    {
-        $migration = $this->buildMigration($this->createMock(self::getMariadbPlatformClass()));
-
-        $migration->abortIfUnsupportedPlatformPublic(SqlPlatform::MYSQL, SqlPlatform::MARIADB);
+        $migration->abortIfUnsupportedPlatformPublic(...$supportedPlatforms);
 
         self::assertSame([], $this->getQueuedStatements($migration));
     }
 
-    public function testAbortIfUnsupportedPlatformThrowsWhenPlatformIsCompletelyUnsupported(): void
+    /**
+     * @return iterable<string, array{class-string<AbstractPlatform>, list<string>}>
+     */
+    public static function provideSupportedPlatforms(): iterable
     {
-        $migration = $this->buildMigration($this->createMock(AbstractPlatform::class));
+        yield 'PostgreSQL among MySQL, PostgreSQL and SQLite' => [
+            self::getPostgresqlPlatformClass(),
+            [SqlPlatform::MYSQL, SqlPlatform::POSTGRESQL, SqlPlatform::SQLITE],
+        ];
+        yield 'MariaDB listed next to MySQL' => [
+            self::getMariadbPlatformClass(),
+            [SqlPlatform::MYSQL, SqlPlatform::MARIADB],
+        ];
+    }
+
+    /**
+     * @dataProvider provideUnsupportedPlatforms
+     *
+     * @param class-string<AbstractPlatform> $platformClass
+     * @param list<string> $supportedPlatforms
+     */
+    public function testAbortIfUnsupportedPlatformThrowsWhenPlatformIsNotSupported(
+        string $platformClass,
+        array $supportedPlatforms,
+        string $expectedSupportedPlatformList
+    ): void {
+        $migration = $this->buildMigration($this->createStub($platformClass));
 
         $this->expectException(AbortMigration::class);
+        $this->expectExceptionMessage(sprintf(
+            'Unsupported database platform. This migration only supports: %s.',
+            $expectedSupportedPlatformList
+        ));
 
-        $migration->abortIfUnsupportedPlatformPublic(SqlPlatform::MYSQL, SqlPlatform::POSTGRESQL, SqlPlatform::SQLITE);
+        $migration->abortIfUnsupportedPlatformPublic(...$supportedPlatforms);
+    }
+
+    /**
+     * @return iterable<string, array{class-string<AbstractPlatform>, list<string>, string}>
+     */
+    public static function provideUnsupportedPlatforms(): iterable
+    {
+        yield 'PostgreSQL not among MySQL and SQLite' => [
+            self::getPostgresqlPlatformClass(),
+            [SqlPlatform::MYSQL, SqlPlatform::SQLITE],
+            'mysql, sqlite',
+        ];
+        yield 'MariaDB not treated as MySQL' => [
+            self::getMariadbPlatformClass(),
+            [SqlPlatform::MYSQL, SqlPlatform::POSTGRESQL, SqlPlatform::SQLITE],
+            'mysql, postgresql, sqlite',
+        ];
+        yield 'platform not recognized at all' => [
+            AbstractPlatform::class,
+            [SqlPlatform::MYSQL, SqlPlatform::POSTGRESQL, SqlPlatform::SQLITE],
+            'mysql, postgresql, sqlite',
+        ];
     }
 
     /**
@@ -186,7 +203,7 @@ final class AbstractSqlMigrationTest extends TestCase
 
     private function buildMigration(AbstractPlatform $platform): ConcreteAbstractSqlMigration
     {
-        $connection = $this->createMock(Connection::class);
+        $connection = $this->createStub(Connection::class);
         $connection->method('getDatabasePlatform')->willReturn($platform);
 
         return new ConcreteAbstractSqlMigration($connection, new NullLogger());
