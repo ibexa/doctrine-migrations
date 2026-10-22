@@ -64,7 +64,7 @@
     },
     "extra": {
         "branch-alias": {
-            "dev-6.0": "6.0.x-dev"
+            "dev-main": "6.0.x-dev"
         }
     },
     "config": {

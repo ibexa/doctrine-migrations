@@ -20,8 +20,7 @@ jobs:
 
       # ibexa/core requires this package as ~6.0.x-dev, so Composer has to know this checkout is that
       # version; a pull request's merge commit would otherwise be versioned by its hash.
-      - name: Set the package's own version from its branch alias
-        run: echo "COMPOSER_ROOT_VERSION=$(jq -r '.extra."branch-alias" | to_entries[0].value' composer.json)" >> "$GITHUB_ENV"
+      - uses: ibexa/gh-workflows/actions/setup-composer-root-version@main
 
       - uses: ibexa/gh-workflows/actions/composer-install@main
         with:
@@ -49,8 +48,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Set the package's own version from its branch alias
-        run: echo "COMPOSER_ROOT_VERSION=$(jq -r '.extra."branch-alias" | to_entries[0].value' composer.json)" >> "$GITHUB_ENV"
+      - uses: ibexa/gh-workflows/actions/setup-composer-root-version@main
 
       - uses: ibexa/gh-workflows/actions/composer-install@main
         with:
@@ -80,8 +78,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Set the package's own version from its branch alias
-        run: echo "COMPOSER_ROOT_VERSION=$(jq -r '.extra."branch-alias" | to_entries[0].value' composer.json)" >> "$GITHUB_ENV"
+      - uses: ibexa/gh-workflows/actions/setup-composer-root-version@main
 
       - uses: ibexa/gh-workflows/actions/composer-install@main
         with:
