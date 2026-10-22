@@ -18,6 +18,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # ibexa/core requires this package as ~6.0.x-dev, so Composer has to know this checkout is that
+      # version; a pull request's merge commit would otherwise be versioned by its hash.
+      - uses: ibexa/gh-workflows/actions/setup-composer-root-version@main
+
       - uses: ibexa/gh-workflows/actions/composer-install@main
         with:
           php-version: ${{ matrix.php }}
@@ -41,6 +45,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+
+      - uses: ibexa/gh-workflows/actions/setup-composer-root-version@main
 
       - uses: ibexa/gh-workflows/actions/composer-install@main
         with:
@@ -69,6 +75,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+
+      - uses: ibexa/gh-workflows/actions/setup-composer-root-version@main
 
       - uses: ibexa/gh-workflows/actions/composer-install@main
         with:
