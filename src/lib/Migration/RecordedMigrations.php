@@ -46,4 +46,9 @@ final class RecordedMigrations implements EventSubscriber
     {
         return $this->results[$version] ?? null;
     }
+
+    public function hasAny(): bool
+    {
+        return $this->results !== [];
+    }
 }

@@ -9,10 +9,14 @@ declare(strict_types=1);
 namespace Ibexa\Tests\DoctrineMigrations\Migration;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\Platforms\MySQLPlatform;
+use Doctrine\DBAL\Schema\AbstractSchemaManager;
+use Doctrine\DBAL\Schema\Table;
 use Doctrine\Migrations\Event\MigrationsVersionEventArgs;
 use Doctrine\Migrations\Metadata\ExecutedMigrationsList;
 use Doctrine\Migrations\Metadata\MigrationPlan;
 use Doctrine\Migrations\Metadata\Storage\MetadataStorage;
+use Doctrine\Migrations\Metadata\Storage\TableMetadataStorageConfiguration;
 use Doctrine\Migrations\MigratorConfiguration;
 use Doctrine\Migrations\Query\Query;
 use Doctrine\Migrations\QueryWriter;
@@ -36,7 +40,12 @@ final class RecordedMigrationsQueryWriterTest extends TestCase
         $written = $this->write($recordedMigrations, ['Recorded' => [new Query('UPDATE t SET a = 1')], 'Skipped' => []]);
 
         self::assertSame(
-            ['Recorded' => ['UPDATE t SET a = 1', 'INSERT Recorded'], 'Skipped' => []],
+            ['Recorded' => [
+                "-- Doctrine Migrations' metadata table, for a database that has none yet",
+                'CREATE TABLE IF NOT EXISTS doctrine_migration_versions (version VARCHAR(191) NOT NULL, PRIMARY KEY(version)) DEFAULT CHARACTER SET utf8 COLLATE `utf8_unicode_ci` ENGINE = InnoDB',
+                'UPDATE t SET a = 1',
+                'INSERT Recorded',
+            ], 'Skipped' => []],
             $written
         );
     }
@@ -103,26 +112,41 @@ final class RecordedMigrationsQueryWriterTest extends TestCase
                 }
             );
 
-        (new RecordedMigrationsQueryWriter($innerWriter, new class() implements MetadataStorage {
-            public function ensureInitialized(): void {}
+        $table = new Table('doctrine_migration_versions');
+        $table->addColumn('version', 'string', ['length' => 191]);
+        $table->setPrimaryKey(['version']);
+        $schemaManager = self::createStub(AbstractSchemaManager::class);
+        $schemaManager->method('introspectTable')->willReturn($table);
+        $connection = self::createStub(Connection::class);
+        $connection->method('createSchemaManager')->willReturn($schemaManager);
+        $connection->method('getDatabasePlatform')->willReturn(new MySQLPlatform());
 
-            public function getExecutedMigrations(): ExecutedMigrationsList
-            {
-                return new ExecutedMigrationsList([]);
-            }
+        (new RecordedMigrationsQueryWriter(
+            $innerWriter,
+            new class() implements MetadataStorage {
+                public function ensureInitialized(): void {}
 
-            public function complete(ExecutionResult $result): void {}
+                public function getExecutedMigrations(): ExecutedMigrationsList
+                {
+                    return new ExecutedMigrationsList([]);
+                }
 
-            public function reset(): void {}
+                public function complete(ExecutionResult $result): void {}
 
-            /**
-             * @return iterable<Query>
-             */
-            public function getSql(ExecutionResult $result): iterable
-            {
-                yield new Query('INSERT ' . $result->getVersion());
-            }
-        }, $recordedMigrations))->write('file.sql', Direction::UP, $queriesByVersion);
+                public function reset(): void {}
+
+                /**
+                 * @return iterable<Query>
+                 */
+                public function getSql(ExecutionResult $result): iterable
+                {
+                    yield new Query('INSERT ' . $result->getVersion());
+                }
+            },
+            new TableMetadataStorageConfiguration(),
+            $connection,
+            $recordedMigrations
+        ))->write('file.sql', Direction::UP, $queriesByVersion);
 
         return $written;
     }

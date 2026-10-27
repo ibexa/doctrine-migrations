@@ -13,6 +13,7 @@ use Doctrine\Migrations\DependencyFactory;
 use Doctrine\Migrations\EventDispatcher;
 use Doctrine\Migrations\FileQueryWriter;
 use Doctrine\Migrations\Generator\ConcatenationFileBuilder;
+use Doctrine\Migrations\Metadata\Storage\TableMetadataStorageConfiguration;
 use Doctrine\Migrations\QueryWriter;
 use Doctrine\Migrations\Tools\Console\ConsoleInputMigratorConfigurationFactory;
 use Doctrine\Migrations\Tools\Console\MigratorConfigurationFactory;
@@ -43,9 +44,13 @@ final class DependencyFactoryServices
 
     public function createQueryWriter(DependencyFactory $dependencyFactory): QueryWriter
     {
+        $storageConfiguration = $dependencyFactory->getConfiguration()->getMetadataStorageConfiguration();
+
         return new RecordedMigrationsQueryWriter(
             new FileQueryWriter(new ConcatenationFileBuilder(), $dependencyFactory->getLogger()),
             $dependencyFactory->getMetadataStorage(),
+            $storageConfiguration instanceof TableMetadataStorageConfiguration ? $storageConfiguration : new TableMetadataStorageConfiguration(),
+            $dependencyFactory->getConnection(),
             $this->recordedMigrations,
         );
     }
