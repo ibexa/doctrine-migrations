@@ -10,6 +10,7 @@ namespace Ibexa\Contracts\DoctrineMigrations\Migrations;
 
 use Doctrine\DBAL\Platforms\AbstractPlatform;
 use Doctrine\DBAL\Platforms\MariaDBPlatform;
+use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 use Ibexa\Contracts\DoctrineSchema\Database\DatabasePlatformName;
 use Ibexa\Contracts\DoctrineSchema\Database\DatabasePlatformResolver;
@@ -25,6 +26,39 @@ abstract class AbstractSqlMigration extends AbstractMigration
     public const DEFAULT_SQL_STATEMENT_DELIMITER = '-- ibexa:sql-statement-separator';
 
     private ?SqlPlatform $resolvedPlatform = null;
+
+    private ?DryRunContext $dryRunContext = null;
+
+    /**
+     * @internal called for every migration service by RegisterMigrationsPass
+     */
+    public function setDryRunContext(DryRunContext $dryRunContext): void
+    {
+        $this->dryRunContext = $dryRunContext;
+    }
+
+    /**
+     * True during "ibexa:doctrine:migrations:migrate --dry-run". The migrations before this one haven't executed
+     * then: the schema this migration gets, and the database, are as they were before the run.
+     */
+    final protected function isDryRun(): bool
+    {
+        return $this->dryRunContext !== null && $this->dryRunContext->isDryRun();
+    }
+
+    /**
+     * In a dry run, a migration that found nothing to do may only have found that because the migrations before it
+     * haven't executed. Skipped, it isn't recorded, and the next migrate checks it against the database.
+     */
+    public function postUp(Schema $schema): void
+    {
+        parent::postUp($schema);
+
+        $this->skipIf(
+            $this->isDryRun() && $this->getSql() === [],
+            'Nothing to do against the schema from before this dry run; the next migrate checks it against the database.'
+        );
+    }
 
     /**
      * MySQL and MariaDB commit implicitly on every DDL statement, so a transaction can't protect a
