@@ -11,6 +11,8 @@ namespace Ibexa\Bundle\DoctrineMigrations\DependencyInjection\Compiler;
 use Doctrine\DBAL\Connection;
 use Ibexa\Bundle\DoctrineMigrations\Configuration\IbexaMigrationConfigurationFactory;
 use Ibexa\Bundle\RepositoryInstaller\Migration\TaggedMigrationsRunner;
+use Ibexa\Contracts\DoctrineMigrations\Migrations\AbstractSqlMigration;
+use Ibexa\Contracts\DoctrineMigrations\Migrations\DryRunContext;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaMigrationTag;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaOnlyDependencyFactory;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaOnlyMigrationsRepository;
@@ -86,6 +88,10 @@ final class RegisterMigrationsPass implements CompilerPassInterface
                 Connection::class => new BoundArgument(new Reference('ibexa.doctrine_migrations.connection'), false),
                 LoggerInterface::class => new BoundArgument(new Reference('ibexa.doctrine_migrations.logger'), false),
             ] + $definition->getBindings());
+
+            if (is_subclass_of((string) $definition->getClass(), AbstractSqlMigration::class)) {
+                $definition->addMethodCall('setDryRunContext', [new Reference(DryRunContext::class)]);
+            }
 
             $migrationRefs[$id] = new TypedReference($id, (string) $definition->getClass());
         }
