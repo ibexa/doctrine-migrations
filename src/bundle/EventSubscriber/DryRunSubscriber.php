@@ -8,23 +8,23 @@ declare(strict_types=1);
 
 namespace Ibexa\Bundle\DoctrineMigrations\EventSubscriber;
 
-use Ibexa\Contracts\DoctrineMigrations\Migrations\DryRunContext;
+use Ibexa\Contracts\DoctrineMigrations\Migrations\MigrationRunContext;
 use Symfony\Component\Console\ConsoleEvents;
 use Symfony\Component\Console\Event\ConsoleCommandEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 /**
- * Records in {@see DryRunContext} whether an "ibexa:doctrine:migrations:*" command runs with --dry-run.
+ * Records in {@see MigrationRunContext} whether an "ibexa:doctrine:migrations:*" command runs with --dry-run.
  */
 final class DryRunSubscriber implements EventSubscriberInterface
 {
     private const COMMAND_PREFIX = 'ibexa:doctrine:migrations:';
 
-    private DryRunContext $dryRunContext;
+    private MigrationRunContext $migrationRunContext;
 
-    public function __construct(DryRunContext $dryRunContext)
+    public function __construct(MigrationRunContext $migrationRunContext)
     {
-        $this->dryRunContext = $dryRunContext;
+        $this->migrationRunContext = $migrationRunContext;
     }
 
     public static function getSubscribedEvents(): array
@@ -41,7 +41,7 @@ final class DryRunSubscriber implements EventSubscriberInterface
         $name = $command !== null ? $command->getName() : null;
         $input = $event->getInput();
 
-        $this->dryRunContext->setDryRun(
+        $this->migrationRunContext->setDryRun(
             $name !== null
             && str_starts_with($name, self::COMMAND_PREFIX)
             && $input->hasOption('dry-run')
@@ -51,6 +51,6 @@ final class DryRunSubscriber implements EventSubscriberInterface
 
     public function onTerminate(): void
     {
-        $this->dryRunContext->setDryRun(false);
+        $this->migrationRunContext->setDryRun(false);
     }
 }
