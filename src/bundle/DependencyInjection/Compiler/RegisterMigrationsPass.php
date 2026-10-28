@@ -33,9 +33,10 @@ use Symfony\Component\DependencyInjection\TypedReference;
  * {@see ServiceMigrationsRepository} instance that never
  * decorates any inner repository, so it serves Ibexa's own migrations only.
  *
- * For each tagged migration service the pass also binds the Doctrine DBAL {@see Connection} and
- * a {@see LoggerInterface} so that migration constructors can receive them through Symfony's
- * auto-wiring or explicit binding without any extra configuration. Both are sourced from the
+ * For each tagged migration service the pass also binds the Doctrine DBAL {@see Connection},
+ * a {@see LoggerInterface} and the {@see DryRunContext} (for {@see AbstractSqlMigration}'s
+ * constructor) so that migration constructors can receive them through Symfony's auto-wiring or
+ * explicit binding without any extra configuration. The first two are sourced from the
  * application's own "doctrine.migrations.dependency_factory" (registered unconditionally by
  * DoctrineMigrationsBundle) via two Ibexa-owned services, "ibexa.doctrine_migrations.connection"
  * and "ibexa.doctrine_migrations.logger" — never via DoctrineMigrationsBundle's own
@@ -87,11 +88,8 @@ final class RegisterMigrationsPass implements CompilerPassInterface
             $definition->setBindings([
                 Connection::class => new BoundArgument(new Reference('ibexa.doctrine_migrations.connection'), false),
                 LoggerInterface::class => new BoundArgument(new Reference('ibexa.doctrine_migrations.logger'), false),
+                DryRunContext::class => new BoundArgument(new Reference(DryRunContext::class), false),
             ] + $definition->getBindings());
-
-            if (is_subclass_of((string) $definition->getClass(), AbstractSqlMigration::class)) {
-                $definition->addMethodCall('setDryRunContext', [new Reference(DryRunContext::class)]);
-            }
 
             $migrationRefs[$id] = new TypedReference($id, (string) $definition->getClass());
         }
