@@ -19,8 +19,8 @@ use Ibexa\Bundle\DoctrineMigrations\DependencyInjection\Compiler\RegisterMigrati
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaMigrationTag;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaOnlyDependencyFactory;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaOnlyMigrationsRepository;
-use Ibexa\Contracts\DoctrineMigrations\Migrations\MigrationRunContext;
 use Ibexa\DoctrineMigrations\Migration\ServiceMigrationsRepository;
+use Ibexa\Tests\Bundle\DoctrineMigrations\Fixtures\ConcreteAbstractSqlMigration;
 use Ibexa\Tests\Bundle\DoctrineMigrations\Fixtures\IbexaMigrationV500A;
 use Ibexa\Tests\Bundle\DoctrineMigrations\Fixtures\IbexaMigrationV500B;
 use PHPUnit\Framework\TestCase;
@@ -100,20 +100,30 @@ final class RegisterMigrationsPassTest extends TestCase
         self::assertSame('ibexa.doctrine_migrations.logger', (string) $loggerValue);
     }
 
-    public function testMigrationRunContextBindingIsAddedToTaggedMigrations(): void
+    public function testServiceSubscriberMigrationsAreTaggedForTheirLocator(): void
     {
         $container = $this->buildBaseContainer();
+        $container->register(ConcreteAbstractSqlMigration::class, ConcreteAbstractSqlMigration::class)
+            ->addTag(IbexaMigrationTag::TAG);
         $container->register(IbexaMigrationV500A::class, IbexaMigrationV500A::class)
             ->addTag(IbexaMigrationTag::TAG);
 
         (new RegisterMigrationsPass())->process($container);
 
-        $bindings = $container->getDefinition(IbexaMigrationV500A::class)->getBindings();
+        self::assertTrue($container->getDefinition(ConcreteAbstractSqlMigration::class)->hasTag('container.service_subscriber'));
+        self::assertFalse($container->getDefinition(IbexaMigrationV500A::class)->hasTag('container.service_subscriber'));
+    }
 
-        self::assertArrayHasKey(MigrationRunContext::class, $bindings);
-        [$migrationRunContextValue] = $bindings[MigrationRunContext::class]->getValues();
-        self::assertInstanceOf(Reference::class, $migrationRunContextValue);
-        self::assertSame(MigrationRunContext::class, (string) $migrationRunContextValue);
+    public function testAnAutoconfiguredServiceSubscriberTagIsNotAddedAgain(): void
+    {
+        $container = $this->buildBaseContainer();
+        $container->register(ConcreteAbstractSqlMigration::class, ConcreteAbstractSqlMigration::class)
+            ->addTag(IbexaMigrationTag::TAG)
+            ->addTag('container.service_subscriber');
+
+        (new RegisterMigrationsPass())->process($container);
+
+        self::assertCount(1, $container->getDefinition(ConcreteAbstractSqlMigration::class)->getTag('container.service_subscriber'));
     }
 
     public function testConnectionAndLoggerServicesAreFactoredFromApplicationDependencyFactory(): void

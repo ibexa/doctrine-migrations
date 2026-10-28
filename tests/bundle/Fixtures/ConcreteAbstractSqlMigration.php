@@ -59,4 +59,9 @@ final class ConcreteAbstractSqlMigration extends AbstractSqlMigration
     {
         $this->abortIfUnsupportedPlatform(...$supportedPlatforms);
     }
+
+    public function isDryRunPublic(): bool
+    {
+        return $this->isDryRun();
+    }
 }

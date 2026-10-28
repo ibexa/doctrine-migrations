@@ -14,15 +14,20 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 use Ibexa\Contracts\DoctrineSchema\Database\DatabasePlatformName;
 use Ibexa\Contracts\DoctrineSchema\Database\DatabasePlatformResolver;
+use Psr\Container\ContainerInterface;
 use Psr\Log\LoggerInterface;
+use Symfony\Contracts\Service\ServiceSubscriberInterface;
 
 /**
  * Base class for Ibexa migrations that build their SQL per database platform, providing
  * named platform-check helpers ({@see isMySQL()}, {@see isMariaDB()}, {@see isPostgreSQL()},
  * {@see isSqlite()}) instead of raw `$this->platform instanceof ...` checks, and a way to load
  * a platform's SQL from an external file ({@see addSqlFile()}) instead of inlining it in PHP.
+ *
+ * The services it needs come from a locator of what {@see getSubscribedServices()} lists, so the constructor stays
+ * the same when it needs another one.
  */
-abstract class AbstractSqlMigration extends AbstractMigration
+abstract class AbstractSqlMigration extends AbstractMigration implements ServiceSubscriberInterface
 {
     public const DEFAULT_SQL_STATEMENT_DELIMITER = '-- ibexa:sql-statement-separator';
 
@@ -45,20 +50,27 @@ abstract class AbstractSqlMigration extends AbstractMigration
 
     private ?string $resolvedPlatform = null;
 
-    private MigrationRunContext $migrationRunContext;
+    private ?ContainerInterface $locator;
+
+    private ?MigrationRunContext $migrationRunContext = null;
 
     /**
-     * RegisterMigrationsPass binds $migrationRunContext for every migration service; a migration created without it
-     * never runs in a dry run.
+     * RegisterMigrationsPass tags every migration service that subscribes to services, and Symfony binds $locator to
+     * a locator of them. A migration created without it never runs in a dry run.
      */
     public function __construct(
         Connection $connection,
         LoggerInterface $logger,
-        ?MigrationRunContext $migrationRunContext = null
+        ?ContainerInterface $locator = null
     ) {
         parent::__construct($connection, $logger);
 
-        $this->migrationRunContext = $migrationRunContext ?? new MigrationRunContext();
+        $this->locator = $locator;
+    }
+
+    public static function getSubscribedServices(): array
+    {
+        return [MigrationRunContext::class];
     }
 
     /**
@@ -67,7 +79,20 @@ abstract class AbstractSqlMigration extends AbstractMigration
      */
     final protected function isDryRun(): bool
     {
-        return $this->migrationRunContext->isDryRun();
+        return $this->getMigrationRunContext()->isDryRun();
+    }
+
+    private function getMigrationRunContext(): MigrationRunContext
+    {
+        if ($this->migrationRunContext === null) {
+            $migrationRunContext = $this->locator !== null
+                ? $this->locator->get(MigrationRunContext::class)
+                : new MigrationRunContext();
+            assert($migrationRunContext instanceof MigrationRunContext);
+            $this->migrationRunContext = $migrationRunContext;
+        }
+
+        return $this->migrationRunContext;
     }
 
     /**

@@ -11,10 +11,12 @@ namespace Ibexa\Tests\Bundle\DoctrineMigrations\Migrations;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
 use Doctrine\Migrations\Exception\AbortMigration;
+use Ibexa\Contracts\DoctrineMigrations\Migrations\MigrationRunContext;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\SqlPlatform;
 use Ibexa\Tests\Bundle\DoctrineMigrations\Fixtures\ConcreteAbstractSqlMigration;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
+use Symfony\Component\DependencyInjection\ServiceLocator;
 
 final class AbstractSqlMigrationTest extends TestCase
 {
@@ -171,6 +173,29 @@ final class AbstractSqlMigrationTest extends TestCase
         $this->expectException(AbortMigration::class);
 
         $migration->abortIfUnsupportedPlatformPublic(SqlPlatform::MYSQL, SqlPlatform::POSTGRESQL, SqlPlatform::SQLITE);
+    }
+
+    public function testIsDryRunFollowsTheMigrationRunContextFromTheLocator(): void
+    {
+        $context = new MigrationRunContext();
+        $migration = new ConcreteAbstractSqlMigration(
+            $this->createStub(Connection::class),
+            new NullLogger(),
+            new ServiceLocator([MigrationRunContext::class => static fn (): MigrationRunContext => $context])
+        );
+
+        self::assertFalse($migration->isDryRunPublic());
+
+        $context->setDryRun(true);
+
+        self::assertTrue($migration->isDryRunPublic());
+    }
+
+    public function testIsNeverDryRunWithoutALocator(): void
+    {
+        $migration = new ConcreteAbstractSqlMigration($this->createStub(Connection::class), new NullLogger());
+
+        self::assertFalse($migration->isDryRunPublic());
     }
 
     /**
