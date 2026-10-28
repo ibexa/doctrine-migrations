@@ -47,20 +47,20 @@ abstract class AbstractSqlMigration extends AbstractMigration
 
     private ?string $resolvedPlatform = null;
 
-    private DryRunContext $dryRunContext;
+    private MigrationRunContext $migrationRunContext;
 
     /**
-     * RegisterMigrationsPass binds $dryRunContext for every migration service; a migration created without it never
-     * runs in a dry run.
+     * RegisterMigrationsPass binds $migrationRunContext for every migration service; a migration created without it
+     * never runs in a dry run.
      */
     public function __construct(
         Connection $connection,
         LoggerInterface $logger,
-        ?DryRunContext $dryRunContext = null
+        ?MigrationRunContext $migrationRunContext = null
     ) {
         parent::__construct($connection, $logger);
 
-        $this->dryRunContext = $dryRunContext ?? new DryRunContext();
+        $this->migrationRunContext = $migrationRunContext ?? new MigrationRunContext();
     }
 
     /**
@@ -69,7 +69,7 @@ abstract class AbstractSqlMigration extends AbstractMigration
      */
     final protected function isDryRun(): bool
     {
-        return $this->dryRunContext->isDryRun();
+        return $this->migrationRunContext->isDryRun();
     }
 
     /**

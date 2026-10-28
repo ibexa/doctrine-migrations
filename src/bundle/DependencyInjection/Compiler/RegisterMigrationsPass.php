@@ -12,10 +12,10 @@ use Doctrine\DBAL\Connection;
 use Ibexa\Bundle\DoctrineMigrations\Configuration\IbexaMigrationConfigurationFactory;
 use Ibexa\Bundle\RepositoryInstaller\Migration\TaggedMigrationsRunner;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\AbstractSqlMigration;
-use Ibexa\Contracts\DoctrineMigrations\Migrations\DryRunContext;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaMigrationTag;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaOnlyDependencyFactory;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaOnlyMigrationsRepository;
+use Ibexa\Contracts\DoctrineMigrations\Migrations\MigrationRunContext;
 use Ibexa\DoctrineMigrations\Migration\ServiceMigrationsRepository;
 use LogicException;
 use Psr\Log\LoggerInterface;
@@ -34,7 +34,7 @@ use Symfony\Component\DependencyInjection\TypedReference;
  * decorates any inner repository, so it serves Ibexa's own migrations only.
  *
  * For each tagged migration service the pass also binds the Doctrine DBAL {@see Connection},
- * a {@see LoggerInterface} and the {@see DryRunContext} (for {@see AbstractSqlMigration}'s
+ * a {@see LoggerInterface} and the {@see MigrationRunContext} (for {@see AbstractSqlMigration}'s
  * constructor) so that migration constructors can receive them through Symfony's auto-wiring or
  * explicit binding without any extra configuration. The first two are sourced from the
  * application's own "doctrine.migrations.dependency_factory" (registered unconditionally by
@@ -88,7 +88,7 @@ final class RegisterMigrationsPass implements CompilerPassInterface
             $definition->setBindings([
                 Connection::class => new BoundArgument(new Reference('ibexa.doctrine_migrations.connection'), false),
                 LoggerInterface::class => new BoundArgument(new Reference('ibexa.doctrine_migrations.logger'), false),
-                DryRunContext::class => new BoundArgument(new Reference(DryRunContext::class), false),
+                MigrationRunContext::class => new BoundArgument(new Reference(MigrationRunContext::class), false),
             ] + $definition->getBindings());
 
             $migrationRefs[$id] = new TypedReference($id, (string) $definition->getClass());
