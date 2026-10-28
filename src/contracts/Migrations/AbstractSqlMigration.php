@@ -8,12 +8,14 @@ declare(strict_types=1);
 
 namespace Ibexa\Contracts\DoctrineMigrations\Migrations;
 
+use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
 use Doctrine\DBAL\Platforms\MariaDBPlatform;
 use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 use Ibexa\Contracts\DoctrineSchema\Database\DatabasePlatformName;
 use Ibexa\Contracts\DoctrineSchema\Database\DatabasePlatformResolver;
+use Psr\Log\LoggerInterface;
 
 /**
  * Base class for Ibexa migrations that build their SQL per database platform, providing
@@ -27,14 +29,16 @@ abstract class AbstractSqlMigration extends AbstractMigration
 
     private ?SqlPlatform $resolvedPlatform = null;
 
-    private ?DryRunContext $dryRunContext = null;
-
     /**
-     * @internal called for every migration service by RegisterMigrationsPass
+     * RegisterMigrationsPass binds $dryRunContext for every migration service; a migration created without it never
+     * runs in a dry run.
      */
-    public function setDryRunContext(DryRunContext $dryRunContext): void
-    {
-        $this->dryRunContext = $dryRunContext;
+    public function __construct(
+        Connection $connection,
+        LoggerInterface $logger,
+        private readonly DryRunContext $dryRunContext = new DryRunContext()
+    ) {
+        parent::__construct($connection, $logger);
     }
 
     /**
@@ -43,7 +47,7 @@ abstract class AbstractSqlMigration extends AbstractMigration
      */
     final protected function isDryRun(): bool
     {
-        return $this->dryRunContext !== null && $this->dryRunContext->isDryRun();
+        return $this->dryRunContext->isDryRun();
     }
 
     /**
