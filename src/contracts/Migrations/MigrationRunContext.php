@@ -12,7 +12,7 @@ namespace Ibexa\Contracts\DoctrineMigrations\Migrations;
  * Whether the running "ibexa:doctrine:migrations:*" command was given --dry-run. Doctrine Migrations doesn't tell
  * a migration, so the bundle's console subscriber records it here for {@see AbstractSqlMigration::isDryRun()}.
  */
-final class DryRunContext
+final class MigrationRunContext
 {
     private bool $dryRun = false;
 

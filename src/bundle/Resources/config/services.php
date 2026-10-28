@@ -15,9 +15,9 @@ use Doctrine\Migrations\Version\Comparator;
 use Ibexa\Bundle\DoctrineMigrations\Comparator\IbexaMigrationComparator;
 use Ibexa\Bundle\DoctrineMigrations\Configuration\IbexaMigrationConfigurationFactory;
 use Ibexa\Bundle\DoctrineMigrations\EventSubscriber\DryRunSubscriber;
-use Ibexa\Contracts\DoctrineMigrations\Migrations\DryRunContext;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaOnlyDependencyFactory;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaOnlyMigrationsRepository;
+use Ibexa\Contracts\DoctrineMigrations\Migrations\MigrationRunContext;
 use Ibexa\DoctrineMigrations\Migration\ServiceMigrationsRepository;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 
@@ -66,9 +66,9 @@ return static function (ContainerConfigurator $containerConfigurator): void {
 
     $services->set(IbexaMigrationComparator::class);
 
-    $services->set(DryRunContext::class);
+    $services->set(MigrationRunContext::class);
 
     $services->set(DryRunSubscriber::class)
-        ->args([service(DryRunContext::class)])
+        ->args([service(MigrationRunContext::class)])
         ->tag('kernel.event_subscriber');
 };
