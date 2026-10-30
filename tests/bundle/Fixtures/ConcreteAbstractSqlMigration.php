@@ -55,6 +55,18 @@ final class ConcreteAbstractSqlMigration extends AbstractSqlMigration
         $this->addSqlFile($file, $delimiter);
     }
 
+    /**
+     * @param mixed[] $params
+     * @param mixed[] $types
+     */
+    public function addSqlPublic(
+        string $sql,
+        array $params = [],
+        array $types = []
+    ): void {
+        $this->addSql($sql, $params, $types);
+    }
+
     public function abortIfUnsupportedPlatformPublic(string ...$supportedPlatforms): void
     {
         $this->abortIfUnsupportedPlatform(...$supportedPlatforms);
