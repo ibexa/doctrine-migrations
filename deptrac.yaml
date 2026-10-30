@@ -5,22 +5,31 @@ deptrac:
         - name: Bundle
           collectors:
               - type: directory
-                value: bundle/.*
+                value: src/bundle/.*
         - name: Contracts
           collectors:
               - type: directory
-                value: contracts/.*
+                value: src/contracts/.*
+        - name: InternalContracts
+          collectors:
+              - type: directory
+                value: src/internal-contracts/.*
         - name: Library
           collectors:
               - type: directory
-                value: lib/.*
+                value: src/lib/.*
     ruleset:
         Bundle:
             - Bundle
             - Contracts
+            - InternalContracts
             - Library
         Contracts:
             - Contracts
+        InternalContracts:
+            - Contracts
+            - InternalContracts
         Library:
             - Contracts
+            - InternalContracts
             - Library

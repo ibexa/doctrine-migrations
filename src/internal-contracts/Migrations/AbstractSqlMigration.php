@@ -6,11 +6,12 @@
  */
 declare(strict_types=1);
 
-namespace Ibexa\Contracts\DoctrineMigrations\Migrations;
+namespace Ibexa\InternalContracts\DoctrineMigrations\Migrations;
 
 use Doctrine\DBAL\Platforms\AbstractPlatform;
 use Doctrine\DBAL\Platforms\MariaDBPlatform;
 use Doctrine\Migrations\AbstractMigration;
+use Ibexa\Contracts\DoctrineMigrations\Migrations\SqlPlatform;
 use Ibexa\Contracts\DoctrineSchema\Database\DatabasePlatformName;
 use Ibexa\Contracts\DoctrineSchema\Database\DatabasePlatformResolver;
 
