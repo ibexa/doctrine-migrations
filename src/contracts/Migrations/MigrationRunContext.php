@@ -9,14 +9,16 @@ declare(strict_types=1);
 namespace Ibexa\Contracts\DoctrineMigrations\Migrations;
 
 /**
- * Whether the running "ibexa:doctrine:migrations:*" command was given --dry-run. Doctrine Migrations doesn't tell
- * a migration, so the bundle's console subscriber records it here for {@see AbstractSqlMigration::isDryRun()}.
+ * Whether the running "ibexa:doctrine:migrations:*" command was given --dry-run or --write-sql. Doctrine Migrations
+ * doesn't tell a migration, so the bundle's console subscriber records it here for {@see AbstractSqlMigration}.
  *
  * @internal for internal use by Ibexa 1st party packages
  */
 final class MigrationRunContext
 {
     private bool $dryRun = false;
+
+    private bool $writesSql = false;
 
     public function setDryRun(bool $dryRun): void
     {
@@ -26,5 +28,15 @@ final class MigrationRunContext
     public function isDryRun(): bool
     {
         return $this->dryRun;
+    }
+
+    public function setWritesSql(bool $writesSql): void
+    {
+        $this->writesSql = $writesSql;
+    }
+
+    public function writesSql(): bool
+    {
+        return $this->writesSql;
     }
 }

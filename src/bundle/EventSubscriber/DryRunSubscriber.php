@@ -14,7 +14,8 @@ use Symfony\Component\Console\Event\ConsoleCommandEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 /**
- * Records in {@see MigrationRunContext} whether an "ibexa:doctrine:migrations:*" command runs with --dry-run.
+ * Records in {@see MigrationRunContext} whether an "ibexa:doctrine:migrations:*" command runs with --dry-run or
+ * --write-sql.
  */
 final class DryRunSubscriber implements EventSubscriberInterface
 {
@@ -35,16 +36,24 @@ final class DryRunSubscriber implements EventSubscriberInterface
         $name = $event->getCommand()?->getName();
         $input = $event->getInput();
 
+        $isMigrationsCommand = $name !== null && str_starts_with($name, self::COMMAND_PREFIX);
+
         $this->migrationRunContext->setDryRun(
-            $name !== null
-            && str_starts_with($name, self::COMMAND_PREFIX)
+            $isMigrationsCommand
             && $input->hasOption('dry-run')
             && $input->getOption('dry-run') === true
+        );
+        // Doctrine's default for --write-sql is false; given without a path, it is null.
+        $this->migrationRunContext->setWritesSql(
+            $isMigrationsCommand
+            && $input->hasOption('write-sql')
+            && $input->getOption('write-sql') !== false
         );
     }
 
     public function onTerminate(): void
     {
         $this->migrationRunContext->setDryRun(false);
+        $this->migrationRunContext->setWritesSql(false);
     }
 }

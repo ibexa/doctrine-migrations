@@ -9,9 +9,12 @@ declare(strict_types=1);
 namespace Ibexa\Contracts\DoctrineMigrations\Migrations;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
 use Doctrine\DBAL\Platforms\MariaDBPlatform;
 use Doctrine\DBAL\Schema\Schema;
+use Doctrine\DBAL\SQL\Parser\Visitor;
+use Doctrine\DBAL\Types\Type;
 use Doctrine\Migrations\AbstractMigration;
 use Ibexa\Contracts\DoctrineSchema\Database\DatabasePlatformName;
 use Ibexa\Contracts\DoctrineSchema\Database\DatabasePlatformResolver;
@@ -62,6 +65,30 @@ abstract class AbstractSqlMigration extends AbstractMigration
             $this->isDryRun() && $this->getSql() === [],
             'Nothing to do against the schema from before this dry run; the next migrate checks it against the database.'
         );
+    }
+
+    /**
+     * Doctrine writes a statement into the --write-sql file as it is, so one with bound parameters ends up there with
+     * its "?" placeholders, and the database client stops at it. When the run writes its SQL (--dry-run or
+     * --write-sql), the parameters are written into the statement instead, quoted by the connection. Parameters with
+     * no literal form here (arrays, binary and large objects) stay bound.
+     *
+     * @param mixed[] $params
+     * @param mixed[] $types
+     */
+    protected function addSql(
+        string $sql,
+        array $params = [],
+        array $types = [],
+    ): void {
+        $literalSql = $params !== [] && $this->writesSql() ? $this->withLiteralParameters($sql, $params, $types) : null;
+        if ($literalSql !== null) {
+            parent::addSql($literalSql);
+
+            return;
+        }
+
+        parent::addSql($sql, $params, $types);
     }
 
     /**
@@ -158,6 +185,115 @@ abstract class AbstractSqlMigration extends AbstractMigration
                 ))
             )
         );
+    }
+
+    private function writesSql(): bool
+    {
+        return $this->migrationRunContext->isDryRun() || $this->migrationRunContext->writesSql();
+    }
+
+    /**
+     * @param mixed[] $params
+     * @param mixed[] $types
+     */
+    private function withLiteralParameters(
+        string $sql,
+        array $params,
+        array $types
+    ): ?string {
+        $literals = [];
+        foreach ($params as $key => $value) {
+            $literal = $this->toLiteral($value, $types[$key] ?? ParameterType::STRING);
+            if ($literal === null) {
+                return null;
+            }
+
+            $literals[$key] = $literal;
+        }
+
+        $visitor = new class($literals) implements Visitor {
+            private int $position = 0;
+
+            /** @var list<string> */
+            private array $parts = [];
+
+            private bool $complete = true;
+
+            /**
+             * @param array<int|string, string> $literals
+             */
+            public function __construct(private readonly array $literals) {}
+
+            public function acceptPositionalParameter(string $sql): void
+            {
+                $this->addLiteral($this->position++);
+            }
+
+            public function acceptNamedParameter(string $sql): void
+            {
+                $this->addLiteral(substr($sql, 1));
+            }
+
+            public function acceptOther(string $sql): void
+            {
+                $this->parts[] = $sql;
+            }
+
+            public function getSql(): ?string
+            {
+                return $this->complete ? implode('', $this->parts) : null;
+            }
+
+            private function addLiteral(int | string $key): void
+            {
+                if (!isset($this->literals[$key])) {
+                    $this->complete = false;
+
+                    return;
+                }
+
+                $this->parts[] = $this->literals[$key];
+            }
+        };
+        $this->platform->createSQLParser()->parse($sql, $visitor);
+
+        return $visitor->getSql();
+    }
+
+    private function toLiteral(
+        mixed $value,
+        mixed $type
+    ): ?string {
+        if (is_string($type)) {
+            $type = Type::getType($type);
+        }
+
+        if ($type instanceof Type) {
+            $value = $type->convertToDatabaseValue($value, $this->platform);
+            $type = $type->getBindingType();
+        }
+
+        if ($value === null) {
+            return 'NULL';
+        }
+
+        if ($type === ParameterType::INTEGER && is_int($value)) {
+            return (string)$value;
+        }
+
+        if ($type === ParameterType::BOOLEAN && is_bool($value)) {
+            $literal = $this->platform->convertBooleans($value);
+
+            return is_int($literal) || is_string($literal) ? (string)$literal : null;
+        }
+
+        if (($type === ParameterType::STRING || $type === ParameterType::ASCII) && (is_string($value) || is_int($value) || is_float($value))) {
+            $quoted = $this->connection->quote((string)$value);
+
+            return is_string($quoted) ? $quoted : null;
+        }
+
+        return null;
     }
 
     private function resolvePlatform(): ?SqlPlatform
