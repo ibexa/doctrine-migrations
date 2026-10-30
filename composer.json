@@ -36,7 +36,8 @@
         "psr-4": {
             "Ibexa\\DoctrineMigrations\\": "src/lib/",
             "Ibexa\\Bundle\\DoctrineMigrations\\": "src/bundle/",
-            "Ibexa\\Contracts\\DoctrineMigrations\\": "src/contracts/"
+            "Ibexa\\Contracts\\DoctrineMigrations\\": "src/contracts/",
+            "Ibexa\\InternalContracts\\DoctrineMigrations\\": "src/internal-contracts/"
         }
     },
     "autoload-dev": {

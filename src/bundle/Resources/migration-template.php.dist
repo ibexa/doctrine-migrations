@@ -6,9 +6,9 @@ namespace <namespace>;
 
 use DateTimeImmutable;
 use Doctrine\DBAL\Schema\Schema;
-use Ibexa\Contracts\DoctrineMigrations\Migrations\AbstractSqlMigration;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaMigrationInterface;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\SqlPlatform;
+use Ibexa\InternalContracts\DoctrineMigrations\Migrations\AbstractSqlMigration;
 
 /**
  * Auto-generated Ibexa migration: please modify to your needs.

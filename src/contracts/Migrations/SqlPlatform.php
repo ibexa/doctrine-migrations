@@ -11,7 +11,7 @@ namespace Ibexa\Contracts\DoctrineMigrations\Migrations;
 use Ibexa\Contracts\DoctrineSchema\Database\DatabasePlatformName;
 
 /**
- * Database platforms an {@see AbstractSqlMigration} can target.
+ * Database platforms an Ibexa SQL migration can target.
  *
  * Unlike {@see DatabasePlatformName}, MariaDB is a platform of its own here: it runs MySQL's SQL,
  * but some DDL (JSON columns, for instance) has to match what Doctrine DBAL generates for MariaDB.

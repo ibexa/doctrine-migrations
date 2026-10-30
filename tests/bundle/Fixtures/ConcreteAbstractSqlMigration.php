@@ -9,8 +9,8 @@ declare(strict_types=1);
 namespace Ibexa\Tests\Bundle\DoctrineMigrations\Fixtures;
 
 use Doctrine\DBAL\Schema\Schema;
-use Ibexa\Contracts\DoctrineMigrations\Migrations\AbstractSqlMigration;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\SqlPlatform;
+use Ibexa\InternalContracts\DoctrineMigrations\Migrations\AbstractSqlMigration;
 
 final class ConcreteAbstractSqlMigration extends AbstractSqlMigration
 {
