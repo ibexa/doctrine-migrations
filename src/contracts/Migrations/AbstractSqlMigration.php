@@ -18,6 +18,8 @@ use Ibexa\Contracts\DoctrineSchema\Database\DatabasePlatformResolver;
  * named platform-check helpers ({@see isMySQL()}, {@see isMariaDB()}, {@see isPostgreSQL()},
  * {@see isSqlite()}) instead of raw `$this->platform instanceof ...` checks, and a way to load
  * a platform's SQL from an external file ({@see addSqlFile()}) instead of inlining it in PHP.
+ *
+ * @internal for internal use by Ibexa 1st party packages
  */
 abstract class AbstractSqlMigration extends AbstractMigration
 {
