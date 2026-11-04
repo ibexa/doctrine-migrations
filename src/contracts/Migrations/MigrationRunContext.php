@@ -9,8 +9,8 @@ declare(strict_types=1);
 namespace Ibexa\Contracts\DoctrineMigrations\Migrations;
 
 /**
- * Whether the running "ibexa:doctrine:migrations:*" command was given --dry-run. Doctrine Migrations doesn't tell
- * a migration, so the bundle's console subscriber records it here for {@see AbstractSqlMigration::isDryRun()}.
+ * Whether Doctrine Migrations executes the current migration in a dry run. Doctrine tells its event listeners but not
+ * the migration, so the bundle's DryRunListener records it here for {@see AbstractSqlMigration::isDryRun()}.
  *
  * @internal for internal use by Ibexa 1st party packages
  */

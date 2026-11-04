@@ -64,8 +64,9 @@ abstract class AbstractSqlMigration extends AbstractMigration
     }
 
     /**
-     * True during "ibexa:doctrine:migrations:migrate --dry-run". The migrations before this one haven't executed
-     * then: the schema this migration gets, and the database, are as they were before the run.
+     * True when Doctrine Migrations executes this migration in a dry run, e.g. "ibexa:doctrine:migrations:migrate
+     * --dry-run". The migrations before this one haven't executed then: the schema this migration gets, and the
+     * database, are as they were before the run.
      */
     final protected function isDryRun(): bool
     {
