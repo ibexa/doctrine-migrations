@@ -37,6 +37,9 @@ final class RolledBackDryRunConfigurationFactory implements MigratorConfiguratio
     {
         $configuration = $this->innerFactory->getMigratorConfiguration($input);
 
-        return $this->migrationRunContext->isRolledBack() ? $configuration->setDryRun(false) : $configuration;
+        // all-or-nothing wraps the run in one transaction, which Doctrine rolls back itself when a migration fails
+        return $this->migrationRunContext->isRolledBack()
+            ? $configuration->setDryRun(false)->setAllOrNothing(true)
+            : $configuration;
     }
 }

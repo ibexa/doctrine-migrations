@@ -14,8 +14,9 @@ use Doctrine\Migrations\Events;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\MigrationRunContext;
 
 /**
- * Wraps a rolled-back dry run (see {@see DryRunSubscriber}) in one transaction and rolls it back once every migration
- * has run: the migrations execute for real, each one seeing what the ones before it did, and nothing is kept.
+ * Rolls back a rolled-back dry run (see {@see DryRunSubscriber}) once every migration has run: the migrations execute
+ * for real inside the transaction of Doctrine's all-or-nothing mode, each one seeing what the ones before it did, and
+ * nothing is kept. When a migration fails, Doctrine rolls the transaction back itself.
  */
 final class RolledBackDryRunSubscriber implements EventSubscriber
 {
@@ -28,14 +29,7 @@ final class RolledBackDryRunSubscriber implements EventSubscriber
 
     public function getSubscribedEvents(): array
     {
-        return [Events::onMigrationsMigrating, Events::onMigrationsMigrated];
-    }
-
-    public function onMigrationsMigrating(MigrationsEventArgs $args): void
-    {
-        if ($this->migrationRunContext->isRolledBack()) {
-            $args->getConnection()->beginTransaction();
-        }
+        return [Events::onMigrationsMigrated];
     }
 
     public function onMigrationsMigrated(MigrationsEventArgs $args): void
