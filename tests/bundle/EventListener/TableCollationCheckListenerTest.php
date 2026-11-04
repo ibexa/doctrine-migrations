@@ -107,6 +107,24 @@ final class TableCollationCheckListenerTest extends TestCase
         ];
     }
 
+    public function testLeavesOutIgnoredTables(): void
+    {
+        $tables = ['ezuser' => 'utf8mb4_general_ci', 'ezcustom_report' => 'latin1_swedish_ci', 'ibexa_app_log' => 'latin1_swedish_ci'];
+
+        (new TableCollationCheckListener(
+            new MigrationRunContext(['collate' => 'utf8mb4_general_ci']),
+            ['ezcustom_report', 'ibexa_app_*']
+        ))->onMigrationsMigrating($this->buildEventArgs($this->buildMysqlConnection($tables)));
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage(': ibexa_app_log (latin1_swedish_ci). ');
+
+        (new TableCollationCheckListener(
+            new MigrationRunContext(['collate' => 'utf8mb4_general_ci']),
+            ['ezcustom_report']
+        ))->onMigrationsMigrating($this->buildEventArgs($this->buildMysqlConnection($tables)));
+    }
+
     public function testChecksOnlyMysqlAndMariadb(): void
     {
         $connection = $this->createMock(Connection::class);
@@ -142,11 +160,12 @@ final class TableCollationCheckListenerTest extends TestCase
         Connection $connection
     ): void {
         (new TableCollationCheckListener(new MigrationRunContext($tableOptions)))
-            ->onMigrationsMigrating(new MigrationsEventArgs(
-                $connection,
-                new MigrationPlanList([], Direction::UP),
-                new MigratorConfiguration()
-            ));
+            ->onMigrationsMigrating($this->buildEventArgs($connection));
+    }
+
+    private function buildEventArgs(Connection $connection): MigrationsEventArgs
+    {
+        return new MigrationsEventArgs($connection, new MigrationPlanList([], Direction::UP), new MigratorConfiguration());
     }
 
     /**

@@ -22,7 +22,9 @@ use RuntimeException;
  * existing one (an oauth2 consent its user's login, a shopping list entry its product's code) would stop the run.
  *
  * Only Ibexa's tables count, the ones named "ez*" or "ibexa_*": a project keeps tables of its own in the same database,
- * in whatever collation it likes, and no Ibexa foreign key points at them.
+ * in whatever collation it likes, and no Ibexa foreign key points at them. Project tables that happen to be named like
+ * Ibexa's go in "ibexa_doctrine_migrations.table_collation_check.ignored_tables", and "enabled: false" there turns the
+ * check off.
  */
 final class TableCollationCheckListener
 {
@@ -37,9 +39,18 @@ final class TableCollationCheckListener
 
     private MigrationRunContext $migrationRunContext;
 
-    public function __construct(MigrationRunContext $migrationRunContext)
-    {
+    /** @var list<string> */
+    private array $ignoredTables;
+
+    /**
+     * @param list<string> $ignoredTables table names, "*" matching any characters
+     */
+    public function __construct(
+        MigrationRunContext $migrationRunContext,
+        array $ignoredTables = []
+    ) {
         $this->migrationRunContext = $migrationRunContext;
+        $this->ignoredTables = $ignoredTables;
     }
 
     public function onMigrationsMigrating(MigrationsEventArgs $args): void
@@ -57,7 +68,7 @@ final class TableCollationCheckListener
                 AND TABLE_TYPE = 'BASE TABLE' AND TABLE_COLLATION IS NOT NULL ORDER BY TABLE_NAME"
         );
         foreach ($tables as $table => $collation) {
-            if (!is_string($collation) || preg_match(self::IBEXA_TABLE_PATTERN, (string)$table) !== 1) {
+            if (!is_string($collation) || !$this->isIbexaTable((string)$table)) {
                 continue;
             }
 
@@ -76,11 +87,27 @@ final class TableCollationCheckListener
             'Ibexa tables in this database use another collation than the %s the tables these migrations create '
             . 'would get, from "ibexa_doctrine_schema.tables.options" (DATABASE_CHARSET and DATABASE_COLLATION in the '
             . 'recipe): %s. A foreign key between string columns of different collations fails, so nothing was '
-            . 'migrated. Configure the collation those tables use, or convert them to the configured one first.',
+            . 'migrated. Configure the collation those tables use, or convert them to the configured one first. '
+            . 'Tables Ibexa doesn\'t own go in "ibexa_doctrine_migrations.table_collation_check.ignored_tables".',
             $expected,
             implode(', ', array_slice($mismatched, 0, self::LISTED_TABLES))
                 . (count($mismatched) > self::LISTED_TABLES ? sprintf(' and %d more', count($mismatched) - self::LISTED_TABLES) : '')
         ));
+    }
+
+    private function isIbexaTable(string $table): bool
+    {
+        if (preg_match(self::IBEXA_TABLE_PATTERN, $table) !== 1) {
+            return false;
+        }
+
+        foreach ($this->ignoredTables as $ignoredTable) {
+            if (fnmatch($ignoredTable, $table)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**

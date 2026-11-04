@@ -15,11 +15,10 @@ use Doctrine\Migrations\EventDispatcher;
 use Doctrine\Migrations\Events;
 use Ibexa\Bundle\DoctrineMigrations\EventListener\DryRunListener;
 use Ibexa\Bundle\DoctrineMigrations\EventListener\TableCollationCheckListener;
-use Ibexa\Contracts\DoctrineMigrations\Migrations\MigrationRunContext;
 
 /**
  * Builds the Ibexa-only DependencyFactory's event dispatcher (registered with its setDefinition()), with
- * {@see DryRunListener} and {@see TableCollationCheckListener} on it.
+ * {@see DryRunListener} and, unless it's disabled, {@see TableCollationCheckListener} on it.
  *
  * Doctrine's own dispatcher goes through the connection's event manager, where a "doctrine.event_listener" tag would
  * reach. DBAL 4 connections have none, and a DependencyFactory made from a connection then gets an empty manager of its
@@ -29,14 +28,14 @@ final class EventDispatcherFactory
 {
     private DryRunListener $dryRunListener;
 
-    private MigrationRunContext $migrationRunContext;
+    private ?TableCollationCheckListener $tableCollationCheckListener;
 
     public function __construct(
         DryRunListener $dryRunListener,
-        MigrationRunContext $migrationRunContext
+        ?TableCollationCheckListener $tableCollationCheckListener
     ) {
         $this->dryRunListener = $dryRunListener;
-        $this->migrationRunContext = $migrationRunContext;
+        $this->tableCollationCheckListener = $tableCollationCheckListener;
     }
 
     public function create(DependencyFactory $dependencyFactory): EventDispatcher
@@ -48,10 +47,9 @@ final class EventDispatcherFactory
             ? $connection->getEventManager()
             : new EventManager();
         $eventManager->addEventListener([Events::onMigrationsVersionExecuting], $this->dryRunListener);
-        $eventManager->addEventListener(
-            [Events::onMigrationsMigrating],
-            new TableCollationCheckListener($this->migrationRunContext)
-        );
+        if ($this->tableCollationCheckListener !== null) {
+            $eventManager->addEventListener([Events::onMigrationsMigrating], $this->tableCollationCheckListener);
+        }
 
         return new EventDispatcher($connection, $eventManager);
     }
