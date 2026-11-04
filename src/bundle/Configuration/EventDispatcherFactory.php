@@ -13,7 +13,6 @@ use Doctrine\DBAL\Connection;
 use Doctrine\Migrations\DependencyFactory;
 use Doctrine\Migrations\EventDispatcher;
 use Doctrine\Migrations\Events;
-use Doctrine\Migrations\Metadata\Storage\TableMetadataStorageConfiguration;
 use Ibexa\Bundle\DoctrineMigrations\EventListener\DryRunListener;
 use Ibexa\Bundle\DoctrineMigrations\EventListener\TableCollationCheckListener;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\MigrationRunContext;
@@ -51,18 +50,9 @@ final class EventDispatcherFactory
         $eventManager->addEventListener([Events::onMigrationsVersionExecuting], $this->dryRunListener);
         $eventManager->addEventListener(
             [Events::onMigrationsMigrating],
-            new TableCollationCheckListener($this->migrationRunContext, self::getMetadataTableName($dependencyFactory))
+            new TableCollationCheckListener($this->migrationRunContext)
         );
 
         return new EventDispatcher($connection, $eventManager);
-    }
-
-    private static function getMetadataTableName(DependencyFactory $dependencyFactory): string
-    {
-        $storageConfiguration = $dependencyFactory->getConfiguration()->getMetadataStorageConfiguration();
-
-        return $storageConfiguration instanceof TableMetadataStorageConfiguration
-            ? $storageConfiguration->getTableName()
-            : (new TableMetadataStorageConfiguration())->getTableName();
     }
 }
