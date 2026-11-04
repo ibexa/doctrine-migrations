@@ -10,10 +10,11 @@ use Doctrine\Migrations\Configuration\Configuration;
 use Doctrine\Migrations\Configuration\Connection\ExistingConnection;
 use Doctrine\Migrations\Configuration\Migration\ExistingConfiguration;
 use Doctrine\Migrations\DependencyFactory;
-use Doctrine\Migrations\Events;
+use Doctrine\Migrations\EventDispatcher;
 use Doctrine\Migrations\MigrationsRepository;
 use Doctrine\Migrations\Version\Comparator;
 use Ibexa\Bundle\DoctrineMigrations\Comparator\IbexaMigrationComparator;
+use Ibexa\Bundle\DoctrineMigrations\Configuration\EventDispatcherFactory;
 use Ibexa\Bundle\DoctrineMigrations\Configuration\IbexaMigrationConfigurationFactory;
 use Ibexa\Bundle\DoctrineMigrations\EventListener\DryRunListener;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaOnlyDependencyFactory;
@@ -63,15 +64,16 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                 ->factory([abstract_arg('the application\'s doctrine.migrations.dependency_factory service'), 'getLogger']),
         ])
         ->call('setService', [MigrationsRepository::class, service(IbexaOnlyMigrationsRepository::SERVICE_ID)])
-        ->call('setService', [Comparator::class, service(IbexaMigrationComparator::class)]);
+        ->call('setService', [Comparator::class, service(IbexaMigrationComparator::class)])
+        ->call('setDefinition', [EventDispatcher::class, [service(EventDispatcherFactory::class), 'create']]);
 
     $services->set(IbexaMigrationComparator::class);
 
     $services->set(MigrationRunContext::class);
 
-    // IbexaOnlyDependencyFactory dispatches its events through the event manager of "ibexa.persistence.connection",
-    // which is one of the application's Doctrine connections
     $services->set(DryRunListener::class)
-        ->args([service(MigrationRunContext::class)])
-        ->tag('doctrine.event_listener', ['event' => Events::onMigrationsVersionExecuting]);
+        ->args([service(MigrationRunContext::class)]);
+
+    $services->set(EventDispatcherFactory::class)
+        ->args([service(DryRunListener::class)]);
 };

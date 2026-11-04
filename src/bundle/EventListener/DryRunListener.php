@@ -15,7 +15,8 @@ use Ibexa\Contracts\DoctrineMigrations\Migrations\MigrationRunContext;
 /**
  * Records in {@see MigrationRunContext} whether Doctrine Migrations executes a migration in a dry run. Doctrine
  * dispatches {@see Events::onMigrationsVersionExecuting} before each migration's preUp() / preDown(), with the
- * migrator configuration it runs under, however the migrator was started.
+ * migrator configuration it runs under, however the migrator was started. EventDispatcherFactory adds it to the
+ * Ibexa-only DependencyFactory's event manager.
  */
 final class DryRunListener
 {

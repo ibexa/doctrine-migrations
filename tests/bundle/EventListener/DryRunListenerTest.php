@@ -27,7 +27,7 @@ final class DryRunListenerTest extends TestCase
     {
         $context = new MigrationRunContext();
         $eventManager = new EventManager();
-        // the way the "doctrine.event_listener" tag registers it
+        // the way EventDispatcherFactory registers it
         $eventManager->addEventListener([Events::onMigrationsVersionExecuting], new DryRunListener($context));
 
         $eventManager->dispatchEvent(Events::onMigrationsVersionExecuting, $this->buildEventArgs(true));
