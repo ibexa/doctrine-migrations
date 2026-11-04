@@ -8,11 +8,14 @@ declare(strict_types=1);
 
 namespace Ibexa\Contracts\DoctrineMigrations\Migrations;
 
+use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
 use Doctrine\DBAL\Platforms\MariaDBPlatform;
+use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 use Ibexa\Contracts\DoctrineSchema\Database\DatabasePlatformName;
 use Ibexa\Contracts\DoctrineSchema\Database\DatabasePlatformResolver;
+use Psr\Log\LoggerInterface;
 
 /**
  * Base class for Ibexa migrations that build their SQL per database platform, providing
@@ -26,7 +29,53 @@ abstract class AbstractSqlMigration extends AbstractMigration
 {
     public const DEFAULT_SQL_STATEMENT_DELIMITER = '-- ibexa:sql-statement-separator';
 
+    /**
+     * The table options DBAL wrote into every MySQL and MariaDB CREATE TABLE of the SQL files, from the
+     * "ibexa_doctrine_schema.tables.options" a project gets by default.
+     */
+    private const MYSQL_DEFAULT_TABLE_OPTIONS = 'DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_520_ci`';
+
     private ?SqlPlatform $resolvedPlatform = null;
+
+    private MigrationRunContext $migrationRunContext;
+
+    /**
+     * RegisterMigrationsPass binds $migrationRunContext for every migration service. It's required, so a migration with
+     * a constructor of its own can't leave it out and silently never see a dry run.
+     */
+    public function __construct(
+        Connection $connection,
+        LoggerInterface $logger,
+        MigrationRunContext $migrationRunContext
+    ) {
+        parent::__construct($connection, $logger);
+
+        $this->migrationRunContext = $migrationRunContext;
+    }
+
+    /**
+     * True when Doctrine Migrations executes this migration in a dry run, e.g. "ibexa:doctrine:migrations:migrate
+     * --dry-run". The migrations before this one haven't executed then: the schema this migration gets, and the
+     * database, are as they were before the run.
+     */
+    final protected function isDryRun(): bool
+    {
+        return $this->migrationRunContext->isDryRun();
+    }
+
+    /**
+     * In a dry run, a migration that found nothing to do may only have found that because the migrations before it
+     * haven't executed. Skipped, it isn't recorded, and the next migrate checks it against the database.
+     */
+    public function postUp(Schema $schema): void
+    {
+        parent::postUp($schema);
+
+        $this->skipIf(
+            $this->isDryRun() && $this->getSql() === [],
+            'Nothing to do against the schema from before this dry run; the next migrate checks it against the database.'
+        );
+    }
 
     /**
      * MySQL and MariaDB commit implicitly on every DDL statement, so a transaction can't protect a
@@ -73,6 +122,9 @@ abstract class AbstractSqlMigration extends AbstractMigration
      * Loads a file containing one or more SQL statements separated by $delimiter (on its own
      * line) and queues each non-empty statement for execution via {@see addSql()}.
      *
+     * On MySQL and MariaDB, the file's default table options become the charset and collation configured in
+     * "ibexa_doctrine_schema.tables.options", which the SchemaBuilderEvent install applies to its tables too.
+     *
      * @param non-empty-string $delimiter
      */
     final protected function addSqlFile(
@@ -94,7 +146,7 @@ abstract class AbstractSqlMigration extends AbstractMigration
                 continue;
             }
 
-            $this->addSql($statement);
+            $this->addSql($this->applyConfiguredTableOptions($statement));
         }
     }
 
@@ -122,6 +174,28 @@ abstract class AbstractSqlMigration extends AbstractMigration
                 ))
             )
         );
+    }
+
+    /**
+     * Like DBAL, a charset configured without a collation gets the charset's "_unicode_ci" one. A collation configured
+     * without a charset goes on its own, and the server takes the charset from it: a charset guessed here may not fit
+     * it, and MariaDB's "uca1400_*" names don't start with one. With neither configured the file's options stay,
+     * instead of DBAL's utf8 ones.
+     */
+    private function applyConfiguredTableOptions(string $statement): string
+    {
+        $charset = $this->migrationRunContext->getTableCharset();
+        $collation = $this->migrationRunContext->getTableCollation();
+
+        if ((!$this->isMySQL() && !$this->isMariaDB()) || ($charset === null && $collation === null)) {
+            return $statement;
+        }
+
+        $tableOptions = $charset === null
+            ? sprintf('COLLATE `%s`', $collation)
+            : sprintf('DEFAULT CHARACTER SET %s COLLATE `%s`', $charset, $collation ?? $charset . '_unicode_ci');
+
+        return str_replace(self::MYSQL_DEFAULT_TABLE_OPTIONS, $tableOptions, $statement);
     }
 
     private function resolvePlatform(): ?SqlPlatform

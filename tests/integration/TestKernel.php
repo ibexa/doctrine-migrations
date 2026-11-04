@@ -19,6 +19,7 @@ use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaMigrationTag;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaOnlyDependencyFactory;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaOnlyMigrationsRepository;
 use Ibexa\Tests\Integration\DoctrineMigrations\Fixtures\IntegrationTestMigration;
+use Ibexa\Tests\Integration\DoctrineMigrations\Fixtures\NothingToDoMigration;
 use Psr\Log\NullLogger;
 use Symfony\Bundle\FrameworkBundle\FrameworkBundle;
 use Symfony\Component\Config\Loader\LoaderInterface;
@@ -72,8 +73,11 @@ final class TestKernel extends Kernel
 
             $container->register('doctrine.migrations.logger', NullLogger::class);
 
-            // Tagged migration wired by RegisterMigrationsPass into ServiceMigrationsRepository.
+            // Tagged migrations wired by RegisterMigrationsPass into ServiceMigrationsRepository.
             $container->register(IntegrationTestMigration::class, IntegrationTestMigration::class)
+                ->setAutowired(true)
+                ->addTag(IbexaMigrationTag::TAG);
+            $container->register(NothingToDoMigration::class, NothingToDoMigration::class)
                 ->setAutowired(true)
                 ->addTag(IbexaMigrationTag::TAG);
 
@@ -82,6 +86,8 @@ final class TestKernel extends Kernel
             $container->setAlias('test.' . IbexaOnlyMigrationsRepository::SERVICE_ID, IbexaOnlyMigrationsRepository::SERVICE_ID)
                 ->setPublic(true);
             $container->setAlias('test.' . IbexaOnlyDependencyFactory::SERVICE_ID, IbexaOnlyDependencyFactory::SERVICE_ID)
+                ->setPublic(true);
+            $container->setAlias('test.ibexa.persistence.connection', 'ibexa.persistence.connection')
                 ->setPublic(true);
         });
     }
