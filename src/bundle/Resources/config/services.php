@@ -16,7 +16,9 @@ use Doctrine\Migrations\Version\Comparator;
 use Ibexa\Bundle\DoctrineMigrations\Comparator\IbexaMigrationComparator;
 use Ibexa\Bundle\DoctrineMigrations\Configuration\EventDispatcherFactory;
 use Ibexa\Bundle\DoctrineMigrations\Configuration\IbexaMigrationConfigurationFactory;
+use Ibexa\Bundle\DoctrineMigrations\DependencyInjection\IbexaDoctrineMigrationsExtension;
 use Ibexa\Bundle\DoctrineMigrations\EventListener\DryRunListener;
+use Ibexa\Bundle\DoctrineMigrations\EventListener\TableCollationCheckListener;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaOnlyDependencyFactory;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaOnlyMigrationsRepository;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\MigrationRunContext;
@@ -25,6 +27,7 @@ use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigura
 
 use function Symfony\Component\DependencyInjection\Loader\Configurator\abstract_arg;
 use function Symfony\Component\DependencyInjection\Loader\Configurator\inline_service;
+use function Symfony\Component\DependencyInjection\Loader\Configurator\param;
 use function Symfony\Component\DependencyInjection\Loader\Configurator\service;
 
 return static function (ContainerConfigurator $containerConfigurator): void {
@@ -74,6 +77,14 @@ return static function (ContainerConfigurator $containerConfigurator): void {
     $services->set(DryRunListener::class)
         ->args([service(MigrationRunContext::class)]);
 
+    // IbexaDoctrineMigrationsExtension removes it when "ibexa_doctrine_migrations.table_collation_check" is disabled
+    $services->set(TableCollationCheckListener::class)
+        ->args([
+            service(MigrationRunContext::class),
+            param(IbexaDoctrineMigrationsExtension::TABLE_COLLATION_CHECK_IGNORED_TABLES),
+            param(IbexaDoctrineMigrationsExtension::TABLE_COLLATION_CHECK_IGNORED_PREFIXES),
+        ]);
+
     $services->set(EventDispatcherFactory::class)
-        ->args([service(DryRunListener::class)]);
+        ->args([service(DryRunListener::class), service(TableCollationCheckListener::class)->nullOnInvalid()]);
 };
