@@ -16,6 +16,7 @@ use Doctrine\Migrations\Metadata\Storage\MetadataStorage;
 use Doctrine\Migrations\Metadata\Storage\TableMetadataStorageConfiguration;
 use Doctrine\Migrations\Query\Query;
 use Doctrine\Migrations\QueryWriter;
+use Doctrine\Migrations\Version\Direction;
 use Doctrine\Migrations\Version\ExecutionResult;
 
 /**
@@ -123,6 +124,18 @@ final class RecordedMigrationsQueryWriter implements QueryWriter
         $version = $this->connection->quote((string)$result->getVersion());
         $executedAt = $this->connection->quote(($result->getExecutedAt() ?? new DateTimeImmutable())->format('Y-m-d H:i:s'));
         assert(is_string($version) && is_string($executedAt));
+
+        if ($result->getDirection() === Direction::DOWN) {
+            return [
+                new Query('-- Version ' . $result->getVersion() . ' update table metadata'),
+                new Query(sprintf(
+                    'DELETE FROM %s WHERE %s = %s',
+                    $this->storageConfiguration->getTableName(),
+                    $this->storageConfiguration->getVersionColumnName(),
+                    $version
+                )),
+            ];
+        }
 
         return [
             new Query('-- Version ' . $result->getVersion() . ' update table metadata'),

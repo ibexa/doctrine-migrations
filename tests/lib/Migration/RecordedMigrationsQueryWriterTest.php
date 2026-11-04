@@ -58,6 +58,28 @@ final class RecordedMigrationsQueryWriterTest extends TestCase
         self::assertSame(['Recorded' => $expectedStatements, 'Skipped' => []], $written);
     }
 
+    public function testDeletesTheVersionRowOfARevertedMigration(): void
+    {
+        $recordedMigrations = new RecordedMigrations();
+        $recordedMigrations->onMigrationsMigrating();
+        $this->executeVersion($recordedMigrations, 'Recorded', false, Direction::DOWN);
+
+        $written = $this->write($recordedMigrations, $this->createStorage(), ['Recorded' => [new Query('UPDATE t SET a = 0')]]);
+
+        self::assertSame(
+            [
+                'Recorded' => [
+                    "-- Doctrine Migrations' metadata table, for a database that has none yet",
+                    self::createMetadataTableSql(),
+                    'UPDATE t SET a = 0',
+                    '-- Version Recorded update table metadata',
+                    "DELETE FROM doctrine_migration_versions WHERE version = 'Recorded'",
+                ],
+            ],
+            $written
+        );
+    }
+
     /**
      * @return iterable<string, array{bool, bool, list<string>}>
      */
@@ -75,14 +97,15 @@ final class RecordedMigrationsQueryWriterTest extends TestCase
     private function executeVersion(
         RecordedMigrations $recordedMigrations,
         string $version,
-        bool $dryRun
+        bool $dryRun,
+        string $direction = Direction::UP
     ): void {
         $plan = new MigrationPlan(
             new Version($version),
             new ConcreteAbstractSqlMigration($this->createStub(Connection::class), new NullLogger(), new MigrationRunContext()),
-            Direction::UP
+            $direction
         );
-        $plan->markAsExecuted(new ExecutionResult(new Version($version), Direction::UP, new DateTimeImmutable('2026-10-27 12:00:00')));
+        $plan->markAsExecuted(new ExecutionResult(new Version($version), $direction, new DateTimeImmutable('2026-10-27 12:00:00')));
 
         $recordedMigrations->onMigrationsVersionExecuted(new MigrationsVersionEventArgs(
             $this->createStub(Connection::class),
