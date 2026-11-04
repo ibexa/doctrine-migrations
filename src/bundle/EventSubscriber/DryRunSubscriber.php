@@ -14,6 +14,7 @@ use Ibexa\Contracts\DoctrineSchema\Database\DatabasePlatformName;
 use Ibexa\Contracts\DoctrineSchema\Database\DatabasePlatformResolver;
 use Symfony\Component\Console\ConsoleEvents;
 use Symfony\Component\Console\Event\ConsoleCommandEvent;
+use Symfony\Component\Console\Event\ConsoleTerminateEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 /**
@@ -82,8 +83,13 @@ final class DryRunSubscriber implements EventSubscriberInterface
         }
     }
 
-    public function onTerminate(): void
+    public function onTerminate(ConsoleTerminateEvent $event): void
     {
+        if ($this->migrationRunContext->isRolledBack()) {
+            // Doctrine's own "Migrating" notice can't say "(dry-run)" for it
+            $event->getOutput()->writeln('<comment>Rolled back: the database is as it was before the dry run.</comment>');
+        }
+
         $this->migrationRunContext->setRolledBack(false);
     }
 }
