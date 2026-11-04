@@ -21,6 +21,7 @@ final class IbexaDoctrineMigrationsExtensionTest extends TestCase
 
         self::assertTrue($container->hasDefinition(TableCollationCheckListener::class));
         self::assertSame([], $container->getParameter(IbexaDoctrineMigrationsExtension::TABLE_COLLATION_CHECK_IGNORED_TABLES));
+        self::assertSame([], $container->getParameter(IbexaDoctrineMigrationsExtension::TABLE_COLLATION_CHECK_IGNORED_PREFIXES));
     }
 
     public function testPassesTheIgnoredTables(): void
@@ -31,6 +32,16 @@ final class IbexaDoctrineMigrationsExtensionTest extends TestCase
         self::assertSame(
             ['ezcustom_report', 'ibexa_app_*'],
             $container->getParameter(IbexaDoctrineMigrationsExtension::TABLE_COLLATION_CHECK_IGNORED_TABLES)
+        );
+    }
+
+    public function testPassesTheIgnoredPrefixes(): void
+    {
+        $container = $this->load([['table_collation_check' => ['ignored_prefixes' => ['ezcustom_', 'ibexa_app_']]]]);
+
+        self::assertSame(
+            ['ezcustom_', 'ibexa_app_'],
+            $container->getParameter(IbexaDoctrineMigrationsExtension::TABLE_COLLATION_CHECK_IGNORED_PREFIXES)
         );
     }
 

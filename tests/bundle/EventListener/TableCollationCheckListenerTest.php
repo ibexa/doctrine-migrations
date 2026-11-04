@@ -125,6 +125,26 @@ final class TableCollationCheckListenerTest extends TestCase
         ))->onMigrationsMigrating($this->buildEventArgs($this->buildMysqlConnection($tables)));
     }
 
+    public function testLeavesOutTablesWithIgnoredPrefixes(): void
+    {
+        $tables = ['ezuser' => 'utf8mb4_general_ci', 'ezcustom_report' => 'latin1_swedish_ci', 'ezcustom_log' => 'latin1_swedish_ci'];
+
+        (new TableCollationCheckListener(
+            new MigrationRunContext(['collate' => 'utf8mb4_general_ci']),
+            [],
+            ['ezcustom_']
+        ))->onMigrationsMigrating($this->buildEventArgs($this->buildMysqlConnection($tables)));
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage(': ezcustom_report (latin1_swedish_ci), ezcustom_log (latin1_swedish_ci). ');
+
+        (new TableCollationCheckListener(
+            new MigrationRunContext(['collate' => 'utf8mb4_general_ci']),
+            [],
+            ['ezcustom_x']
+        ))->onMigrationsMigrating($this->buildEventArgs($this->buildMysqlConnection($tables)));
+    }
+
     public function testChecksOnlyMysqlAndMariadb(): void
     {
         $connection = $this->createMock(Connection::class);

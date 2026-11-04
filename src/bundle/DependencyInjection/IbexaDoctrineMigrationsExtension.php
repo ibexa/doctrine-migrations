@@ -18,6 +18,8 @@ final class IbexaDoctrineMigrationsExtension extends Extension
 {
     public const TABLE_COLLATION_CHECK_IGNORED_TABLES = 'ibexa.doctrine_migrations.table_collation_check.ignored_tables';
 
+    public const TABLE_COLLATION_CHECK_IGNORED_PREFIXES = 'ibexa.doctrine_migrations.table_collation_check.ignored_prefixes';
+
     public function load(
         array $configs,
         ContainerBuilder $container
@@ -26,10 +28,11 @@ final class IbexaDoctrineMigrationsExtension extends Extension
         $loader->load('services.php');
         $loader->load('console.php');
 
-        /** @var array{table_collation_check: array{enabled: bool, ignored_tables: list<string>}} $config */
+        /** @var array{table_collation_check: array{enabled: bool, ignored_tables: list<string>, ignored_prefixes: list<string>}} $config */
         $config = $this->processConfiguration(new Configuration(), $configs);
         $collationCheck = $config['table_collation_check'];
         $container->setParameter(self::TABLE_COLLATION_CHECK_IGNORED_TABLES, $collationCheck['ignored_tables']);
+        $container->setParameter(self::TABLE_COLLATION_CHECK_IGNORED_PREFIXES, $collationCheck['ignored_prefixes']);
         if (!$collationCheck['enabled']) {
             $container->removeDefinition(TableCollationCheckListener::class);
         }
