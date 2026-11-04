@@ -100,6 +100,48 @@ final class LiteralParametersQueryWriterTest extends TestCase
             ['id' => ParameterType::INTEGER],
             'UPDATE t SET a = \'x\' WHERE id = 3',
         ];
+        yield 'positional parameters in array order, not key order' => [
+            self::getMysqlPlatformClass(),
+            'UPDATE t SET a = ? WHERE b = ?',
+            [1 => 'x', 0 => 'y'],
+            [],
+            'UPDATE t SET a = \'x\' WHERE b = \'y\'',
+        ];
+        yield 'positional types counted from 1' => [
+            self::getMysqlPlatformClass(),
+            'UPDATE t SET a = ? WHERE id = ?',
+            ['x', 5],
+            [1 => ParameterType::STRING, 2 => ParameterType::INTEGER],
+            'UPDATE t SET a = \'x\' WHERE id = 5',
+        ];
+        yield 'Doctrine boolean type on MySQL' => [
+            self::getMysqlPlatformClass(),
+            'UPDATE t SET a = ? WHERE b = ?',
+            [true, false],
+            [Types::BOOLEAN, Types::BOOLEAN],
+            'UPDATE t SET a = 1 WHERE b = 0',
+        ];
+        yield 'Doctrine boolean type on PostgreSQL' => [
+            self::getPostgresqlPlatformClass(),
+            'UPDATE t SET a = ? WHERE b = ?',
+            [true, false],
+            [Types::BOOLEAN, Types::BOOLEAN],
+            'UPDATE t SET a = true WHERE b = false',
+        ];
+        yield 'question marks in a quoted identifier and a block comment' => [
+            self::getPostgresqlPlatformClass(),
+            'SELECT "a?" FROM t /* ? */ WHERE id = ?',
+            [5],
+            [ParameterType::INTEGER],
+            'SELECT "a?" FROM t /* ? */ WHERE id = 5',
+        ];
+        yield 'question mark in a backtick identifier on MySQL' => [
+            self::getMysqlPlatformClass(),
+            'SELECT `a?` FROM t WHERE id = ?',
+            [5],
+            [ParameterType::INTEGER],
+            'SELECT `a?` FROM t WHERE id = 5',
+        ];
     }
 
     public function testKeepsParametersBoundWithoutALiteralForm(): void

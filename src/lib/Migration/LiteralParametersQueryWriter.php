@@ -84,15 +84,30 @@ final class LiteralParametersQueryWriter implements QueryWriter
         AbstractPlatform $platform,
         bool $backslashEscapes
     ): ?string {
+        $params = $query->getParameters();
         $types = $query->getTypes();
         $literals = [];
-        foreach ($query->getParameters() as $key => $value) {
-            $literal = $this->toLiteral($value, $types[$key] ?? ParameterType::STRING, $platform);
-            if ($literal === null) {
-                return null;
-            }
+        if (is_int(key($params))) {
+            // Like DBAL: positional parameters bind in array order, whatever their keys, and their types go by that
+            // position too, counted from 0 or from 1.
+            $typeOffset = array_key_exists(0, $types) ? 0 : 1;
+            foreach (array_values($params) as $position => $value) {
+                $literal = $this->toLiteral($value, $types[$position + $typeOffset] ?? ParameterType::STRING, $platform);
+                if ($literal === null) {
+                    return null;
+                }
 
-            $literals[is_string($key) ? ltrim($key, ':') : $key] = $literal;
+                $literals[$position] = $literal;
+            }
+        } else {
+            foreach ($params as $name => $value) {
+                $literal = $this->toLiteral($value, $types[$name] ?? ParameterType::STRING, $platform);
+                if ($literal === null) {
+                    return null;
+                }
+
+                $literals[ltrim((string)$name, ':')] = $literal;
+            }
         }
 
         $position = 0;
@@ -199,8 +214,9 @@ final class LiteralParametersQueryWriter implements QueryWriter
             return (string)$value;
         }
 
-        if ($type === ParameterType::BOOLEAN && is_bool($value)) {
-            $literal = $platform->convertBooleans($value);
+        // DBAL's boolean type converts to 0 or 1, which PostgreSQL doesn't take for a boolean column as a literal
+        if ($type === ParameterType::BOOLEAN && (is_bool($value) || $value === 0 || $value === 1)) {
+            $literal = $platform->convertBooleans((bool)$value);
 
             return is_int($literal) || is_string($literal) ? (string)$literal : null;
         }
