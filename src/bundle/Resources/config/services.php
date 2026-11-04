@@ -10,12 +10,16 @@ use Doctrine\Migrations\Configuration\Configuration;
 use Doctrine\Migrations\Configuration\Connection\ExistingConnection;
 use Doctrine\Migrations\Configuration\Migration\ExistingConfiguration;
 use Doctrine\Migrations\DependencyFactory;
+use Doctrine\Migrations\EventDispatcher;
 use Doctrine\Migrations\MigrationsRepository;
 use Doctrine\Migrations\Version\Comparator;
 use Ibexa\Bundle\DoctrineMigrations\Comparator\IbexaMigrationComparator;
+use Ibexa\Bundle\DoctrineMigrations\Configuration\EventDispatcherFactory;
 use Ibexa\Bundle\DoctrineMigrations\Configuration\IbexaMigrationConfigurationFactory;
+use Ibexa\Bundle\DoctrineMigrations\EventListener\DryRunListener;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaOnlyDependencyFactory;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaOnlyMigrationsRepository;
+use Ibexa\Contracts\DoctrineMigrations\Migrations\MigrationRunContext;
 use Ibexa\DoctrineMigrations\Migration\ServiceMigrationsRepository;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 
@@ -60,7 +64,16 @@ return static function (ContainerConfigurator $containerConfigurator): void {
                 ->factory([abstract_arg('the application\'s doctrine.migrations.dependency_factory service'), 'getLogger']),
         ])
         ->call('setService', [MigrationsRepository::class, service(IbexaOnlyMigrationsRepository::SERVICE_ID)])
-        ->call('setService', [Comparator::class, service(IbexaMigrationComparator::class)]);
+        ->call('setService', [Comparator::class, service(IbexaMigrationComparator::class)])
+        ->call('setDefinition', [EventDispatcher::class, [service(EventDispatcherFactory::class), 'create']]);
 
     $services->set(IbexaMigrationComparator::class);
+
+    $services->set(MigrationRunContext::class);
+
+    $services->set(DryRunListener::class)
+        ->args([service(MigrationRunContext::class)]);
+
+    $services->set(EventDispatcherFactory::class)
+        ->args([service(DryRunListener::class)]);
 };

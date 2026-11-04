@@ -14,7 +14,10 @@ use Doctrine\DBAL\Platforms\MariaDBPlatform;
 use Doctrine\DBAL\Platforms\MySQLPlatform;
 use Doctrine\DBAL\Platforms\PostgreSQLPlatform;
 use Doctrine\DBAL\Platforms\SqlitePlatform;
+use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\Exception\AbortMigration;
+use Doctrine\Migrations\Exception\SkipMigration;
+use Ibexa\Contracts\DoctrineMigrations\Migrations\MigrationRunContext;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\SqlPlatform;
 use Ibexa\Tests\Bundle\DoctrineMigrations\Fixtures\ConcreteAbstractSqlMigration;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -97,6 +100,44 @@ final class AbstractSqlMigrationTest extends TestCase
         yield 'SQLite' => [self::getSqlitePlatformClass(), true];
     }
 
+    public function testPostUpSkipsAMigrationWithoutSqlInADryRun(): void
+    {
+        $context = new MigrationRunContext();
+        $context->setDryRun(true);
+        $migration = $this->buildMigration($this->createMock(self::getMysqlPlatformClass()), $context);
+
+        $this->expectException(SkipMigration::class);
+        $this->expectExceptionMessage('Nothing to do against the schema from before this dry run');
+
+        $migration->postUp(new Schema());
+    }
+
+    #[DataProvider('provideRunsThatKeepTheMigration')]
+    public function testPostUpKeepsTheMigration(
+        bool $dryRun,
+        bool $withSql
+    ): void {
+        $context = new MigrationRunContext();
+        $context->setDryRun($dryRun);
+        $migration = $this->buildMigration($this->createMock(self::getMysqlPlatformClass()), $context);
+        if ($withSql) {
+            $migration->addSqlFilePublic(__DIR__ . '/../Fixtures/sql/statements.sql');
+        }
+
+        $migration->postUp(new Schema());
+
+        self::assertCount($withSql ? 2 : 0, $this->getQueuedStatements($migration));
+    }
+
+    /**
+     * @return iterable<string, array{bool, bool}>
+     */
+    public static function provideRunsThatKeepTheMigration(): iterable
+    {
+        yield 'dry run with SQL' => [true, true];
+        yield 'real run without SQL' => [false, false];
+    }
+
     public function testAddSqlFileQueuesEachNonEmptyStatement(): void
     {
         $migration = $this->buildMigration($this->createMock(self::getMysqlPlatformClass()));
@@ -119,6 +160,71 @@ final class AbstractSqlMigrationTest extends TestCase
             ['SELECT 1 FROM one;', 'SELECT 2 FROM two;'],
             $this->getQueuedStatements($migration),
         );
+    }
+
+    /**
+     * @param class-string<AbstractPlatform> $platformClass
+     * @param array<string, scalar|null> $tableOptions
+     */
+    #[DataProvider('provideTableOptions')]
+    public function testAddSqlFileAppliesConfiguredTableOptions(
+        string $platformClass,
+        array $tableOptions,
+        string $expectedTableOptions
+    ): void {
+        $migration = $this->buildMigration($this->createMock($platformClass), new MigrationRunContext($tableOptions));
+
+        $migration->addSqlFilePublic(__DIR__ . '/../Fixtures/sql/create-table.sql');
+
+        self::assertSame(
+            [
+                "CREATE TABLE one (\n    id INT NOT NULL,\n    PRIMARY KEY(id)\n) $expectedTableOptions ENGINE = InnoDB;",
+                'ALTER TABLE one ADD name VARCHAR(190) NOT NULL;',
+            ],
+            $this->getQueuedStatements($migration),
+        );
+    }
+
+    /**
+     * @return iterable<string, array{class-string<AbstractPlatform>, array<string, scalar|null>, string}>
+     */
+    public static function provideTableOptions(): iterable
+    {
+        $fileOptions = 'DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_520_ci`';
+
+        yield 'MySQL, charset and collate' => [
+            self::getMysqlPlatformClass(),
+            ['charset' => 'utf8mb3', 'collate' => 'utf8mb3_general_ci'],
+            'DEFAULT CHARACTER SET utf8mb3 COLLATE `utf8mb3_general_ci`',
+        ];
+        yield 'MariaDB, charset and collate' => [
+            self::getMariadbPlatformClass(),
+            ['charset' => 'utf8mb3', 'collate' => 'utf8mb3_general_ci'],
+            'DEFAULT CHARACTER SET utf8mb3 COLLATE `utf8mb3_general_ci`',
+        ];
+        yield 'MySQL, collation preferred over collate' => [
+            self::getMysqlPlatformClass(),
+            ['charset' => 'utf8mb4', 'collate' => 'utf8mb4_bin', 'collation' => 'utf8mb4_general_ci'],
+            'DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_general_ci`',
+        ];
+        yield 'MySQL, collation only' => [
+            self::getMysqlPlatformClass(),
+            ['collate' => 'utf8mb3_general_ci'],
+            'COLLATE `utf8mb3_general_ci`',
+        ];
+        yield 'MariaDB, collation only without a charset prefix' => [
+            self::getMariadbPlatformClass(),
+            ['collation' => 'uca1400_ai_ci'],
+            'COLLATE `uca1400_ai_ci`',
+        ];
+        yield 'MySQL, charset only' => [
+            self::getMysqlPlatformClass(),
+            ['charset' => 'utf8mb3'],
+            'DEFAULT CHARACTER SET utf8mb3 COLLATE `utf8mb3_unicode_ci`',
+        ];
+        yield 'MySQL, nothing configured' => [self::getMysqlPlatformClass(), [], $fileOptions];
+        yield 'MySQL, empty values' => [self::getMysqlPlatformClass(), ['charset' => '', 'collate' => ''], $fileOptions];
+        yield 'PostgreSQL' => [self::getPostgresqlPlatformClass(), ['collate' => 'utf8mb4_general_ci'], $fileOptions];
     }
 
     public function testAddSqlFileThrowsWhenFileDoesNotExist(): void
@@ -188,12 +294,14 @@ final class AbstractSqlMigrationTest extends TestCase
         ));
     }
 
-    private function buildMigration(AbstractPlatform $platform): ConcreteAbstractSqlMigration
-    {
+    private function buildMigration(
+        AbstractPlatform $platform,
+        ?MigrationRunContext $migrationRunContext = null
+    ): ConcreteAbstractSqlMigration {
         $connection = $this->createMock(Connection::class);
         $connection->method('getDatabasePlatform')->willReturn($platform);
 
-        return new ConcreteAbstractSqlMigration($connection, new NullLogger());
+        return new ConcreteAbstractSqlMigration($connection, new NullLogger(), $migrationRunContext ?? new MigrationRunContext());
     }
 
     /**
