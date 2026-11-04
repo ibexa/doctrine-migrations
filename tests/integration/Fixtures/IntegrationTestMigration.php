@@ -29,7 +29,10 @@ final class IntegrationTestMigration extends AbstractMigration implements IbexaM
         return 'Integration test migration fixture';
     }
 
-    public function up(Schema $schema): void {}
+    public function up(Schema $schema): void
+    {
+        $this->addSql('CREATE TABLE integration_test_table (id INTEGER NOT NULL)');
+    }
 
     public function down(Schema $schema): void {}
 }
