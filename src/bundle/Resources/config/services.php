@@ -75,5 +75,5 @@ return static function (ContainerConfigurator $containerConfigurator): void {
         ->args([service(MigrationRunContext::class)]);
 
     $services->set(EventDispatcherFactory::class)
-        ->args([service(DryRunListener::class)]);
+        ->args([service(DryRunListener::class), service(MigrationRunContext::class)]);
 };

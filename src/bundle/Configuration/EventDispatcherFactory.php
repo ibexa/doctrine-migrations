@@ -13,23 +13,31 @@ use Doctrine\DBAL\Connection;
 use Doctrine\Migrations\DependencyFactory;
 use Doctrine\Migrations\EventDispatcher;
 use Doctrine\Migrations\Events;
+use Doctrine\Migrations\Metadata\Storage\TableMetadataStorageConfiguration;
 use Ibexa\Bundle\DoctrineMigrations\EventListener\DryRunListener;
+use Ibexa\Bundle\DoctrineMigrations\EventListener\TableCollationCheckListener;
+use Ibexa\Contracts\DoctrineMigrations\Migrations\MigrationRunContext;
 
 /**
  * Builds the Ibexa-only DependencyFactory's event dispatcher (registered with its setDefinition()), with
- * {@see DryRunListener} on it.
+ * {@see DryRunListener} and {@see TableCollationCheckListener} on it.
  *
  * Doctrine's own dispatcher goes through the connection's event manager, where a "doctrine.event_listener" tag would
  * reach. DBAL 4 connections have none, and a DependencyFactory made from a connection then gets an empty manager of its
- * own, which no tag reaches; so the listener is added here instead.
+ * own, which no tag reaches; so the listeners are added here instead.
  */
 final class EventDispatcherFactory
 {
     private DryRunListener $dryRunListener;
 
-    public function __construct(DryRunListener $dryRunListener)
-    {
+    private MigrationRunContext $migrationRunContext;
+
+    public function __construct(
+        DryRunListener $dryRunListener,
+        MigrationRunContext $migrationRunContext
+    ) {
         $this->dryRunListener = $dryRunListener;
+        $this->migrationRunContext = $migrationRunContext;
     }
 
     public function create(DependencyFactory $dependencyFactory): EventDispatcher
@@ -41,7 +49,20 @@ final class EventDispatcherFactory
             ? $connection->getEventManager()
             : new EventManager();
         $eventManager->addEventListener([Events::onMigrationsVersionExecuting], $this->dryRunListener);
+        $eventManager->addEventListener(
+            [Events::onMigrationsMigrating],
+            new TableCollationCheckListener($this->migrationRunContext, self::getMetadataTableName($dependencyFactory))
+        );
 
         return new EventDispatcher($connection, $eventManager);
+    }
+
+    private static function getMetadataTableName(DependencyFactory $dependencyFactory): string
+    {
+        $storageConfiguration = $dependencyFactory->getConfiguration()->getMetadataStorageConfiguration();
+
+        return $storageConfiguration instanceof TableMetadataStorageConfiguration
+            ? $storageConfiguration->getTableName()
+            : (new TableMetadataStorageConfiguration())->getTableName();
     }
 }
