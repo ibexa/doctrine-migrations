@@ -8,7 +8,6 @@ declare(strict_types=1);
 
 namespace Ibexa\Bundle\DoctrineMigrations\Configuration;
 
-use Doctrine\Common\EventManager;
 use Doctrine\Migrations\DependencyFactory;
 use Doctrine\Migrations\EventDispatcher;
 use Doctrine\Migrations\Events;
@@ -72,11 +71,12 @@ final class DependencyFactoryServices
     }
 
     /**
-     * The migrations' own events go to a manager of their own, which has the two subscribers and the dry-run listener.
+     * The migrations' own events go to the connection's event manager, as with Doctrine's own dispatcher, so anything
+     * subscribed there still gets them; the two subscribers and the dry-run listener are added to it.
      */
     public function createEventDispatcher(DependencyFactory $dependencyFactory): EventDispatcher
     {
-        $eventManager = new EventManager();
+        $eventManager = $dependencyFactory->getConnection()->getEventManager();
         $eventManager->addEventSubscriber($this->recordedMigrations);
         $eventManager->addEventSubscriber($this->rolledBackDryRunSubscriber);
         $eventManager->addEventListener([Events::onMigrationsVersionExecuting], $this->dryRunListener);
