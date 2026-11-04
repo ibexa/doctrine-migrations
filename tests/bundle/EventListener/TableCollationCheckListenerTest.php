@@ -25,64 +25,85 @@ final class TableCollationCheckListenerTest extends TestCase
      * @dataProvider provideDatabasesMatchingTheNewTables
      *
      * @param array<string, scalar|null> $tableOptions
-     * @param list<string> $existingCollations
+     * @param array<string, string> $existingTables
      */
     public function testLetsTheRunGoOn(
         array $tableOptions,
-        array $existingCollations
+        array $existingTables
     ): void {
-        $this->runListener($tableOptions, $this->buildMysqlConnection($existingCollations));
+        $this->runListener($tableOptions, $this->buildMysqlConnection($existingTables));
 
         $this->addToAssertionCount(1);
     }
 
     /**
-     * @return iterable<string, array{array<string, scalar|null>, list<string>}>
+     * @return iterable<string, array{array<string, scalar|null>, array<string, string>}>
      */
     public static function provideDatabasesMatchingTheNewTables(): iterable
     {
         $configured = ['charset' => 'utf8mb4', 'collate' => 'utf8mb4_general_ci'];
 
         yield 'empty database' => [$configured, []];
-        yield 'same collation' => [$configured, ['utf8mb4_general_ci']];
-        yield 'other tables in other collations too' => [$configured, ['latin1_swedish_ci', 'utf8mb4_general_ci']];
-        yield 'nothing configured, the SQL files\' collation' => [[], ['utf8mb4_unicode_520_ci']];
-        yield 'charset only' => [['charset' => 'utf8mb4'], ['utf8mb4_unicode_ci']];
-        yield 'MariaDB charset-independent collation' => [['collation' => 'uca1400_ai_ci'], ['utf8mb4_uca1400_ai_ci']];
-        yield 'utf8 alias' => [['charset' => 'utf8', 'collate' => 'utf8_general_ci'], ['utf8mb3_general_ci']];
+        yield 'same collation' => [$configured, ['ezuser' => 'utf8mb4_general_ci', 'ibexa_product' => 'utf8mb4_general_ci']];
+        yield 'project tables in another collation' => [
+            $configured,
+            ['ezuser' => 'utf8mb4_general_ci', 'app_order' => 'latin1_swedish_ci', 'doctrine_migration_versions' => 'utf8mb3_unicode_ci'],
+        ];
+        yield 'only project tables, before an Ibexa install' => [$configured, ['app_order' => 'latin1_swedish_ci']];
+        yield 'nothing configured, the SQL files\' collation' => [[], ['ezuser' => 'utf8mb4_unicode_520_ci']];
+        yield 'charset only' => [['charset' => 'utf8mb4'], ['ezuser' => 'utf8mb4_unicode_ci']];
+        yield 'MariaDB charset-independent collation' => [['collation' => 'uca1400_ai_ci'], ['ezuser' => 'utf8mb4_uca1400_ai_ci']];
+        yield 'utf8 alias' => [['charset' => 'utf8', 'collate' => 'utf8_general_ci'], ['ezuser' => 'utf8mb3_general_ci']];
     }
 
     /**
      * @dataProvider provideDatabasesNotMatchingTheNewTables
      *
      * @param array<string, scalar|null> $tableOptions
-     * @param list<string> $existingCollations
+     * @param array<string, string> $existingTables
      */
     public function testStopsTheRunBeforeAnyMigration(
         array $tableOptions,
-        array $existingCollations,
+        array $existingTables,
         string $expectedMessage
     ): void {
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage($expectedMessage);
 
-        $this->runListener($tableOptions, $this->buildMysqlConnection($existingCollations));
+        $this->runListener($tableOptions, $this->buildMysqlConnection($existingTables));
     }
 
     /**
-     * @return iterable<string, array{array<string, scalar|null>, list<string>, string}>
+     * @return iterable<string, array{array<string, scalar|null>, array<string, string>, string}>
      */
     public static function provideDatabasesNotMatchingTheNewTables(): iterable
     {
+        $configured = ['charset' => 'utf8mb4', 'collate' => 'utf8mb4_general_ci'];
+
         yield 'other collation configured' => [
-            ['charset' => 'utf8mb4', 'collate' => 'utf8mb4_general_ci'],
-            ['utf8mb4_unicode_520_ci'],
-            'The tables in this database use utf8mb4_unicode_520_ci, but the tables these migrations create would get utf8mb4_general_ci',
+            $configured,
+            ['ezuser' => 'utf8mb4_unicode_520_ci'],
+            'another collation than the utf8mb4_general_ci the tables these migrations create would get, from "ibexa_doctrine_schema.tables.options" (DATABASE_CHARSET and DATABASE_COLLATION in the recipe): ezuser (utf8mb4_unicode_520_ci).',
+        ];
+        yield 'a project table matching doesn\'t hide it' => [
+            $configured,
+            ['app_order' => 'utf8mb4_general_ci', 'ezuser' => 'utf8mb4_unicode_520_ci'],
+            ': ezuser (utf8mb4_unicode_520_ci).',
+        ];
+        yield 'one Ibexa table out of line' => [
+            $configured,
+            ['ezcontentobject' => 'utf8mb4_general_ci', 'ibexa_product' => 'utf8mb4_unicode_520_ci'],
+            ': ibexa_product (utf8mb4_unicode_520_ci).',
         ];
         yield 'nothing configured, tables in the server default' => [
             [],
-            ['utf8mb4_0900_ai_ci'],
-            'use utf8mb4_0900_ai_ci, but the tables these migrations create would get utf8mb4_unicode_520_ci',
+            ['ibexa_user' => 'utf8mb4_0900_ai_ci'],
+            'than the utf8mb4_unicode_520_ci',
+        ];
+        yield 'long list' => [
+            $configured,
+            ['eza' => 'latin1_swedish_ci', 'ezb' => 'latin1_swedish_ci', 'ezc' => 'latin1_swedish_ci', 'ezd' => 'latin1_swedish_ci', 'eze' => 'latin1_swedish_ci', 'ezf' => 'latin1_swedish_ci', 'ezg' => 'latin1_swedish_ci'],
+            'eze (latin1_swedish_ci) and 2 more.',
         ];
     }
 
@@ -91,24 +112,24 @@ final class TableCollationCheckListenerTest extends TestCase
         $connection = $this->createMock(Connection::class);
         $platformClass = self::getPostgresqlPlatformClass();
         $connection->method('getDatabasePlatform')->willReturn(new $platformClass());
-        $connection->expects(self::never())->method('fetchFirstColumn');
+        $connection->expects(self::never())->method('fetchAllKeyValue');
 
         $this->runListener(['collate' => 'utf8mb4_general_ci'], $connection);
     }
 
     /**
-     * @param list<string> $existingCollations
+     * @param array<string, string> $existingTables
      */
-    private function buildMysqlConnection(array $existingCollations): Connection
+    private function buildMysqlConnection(array $existingTables): Connection
     {
         $platformClass = self::getMysqlPlatformClass();
 
         $connection = $this->createMock(Connection::class);
         $connection->method('getDatabasePlatform')->willReturn(new $platformClass());
         $connection->expects(self::once())
-            ->method('fetchFirstColumn')
-            ->with(self::stringContains('information_schema.TABLES'), ['doctrine_migration_versions'])
-            ->willReturn($existingCollations);
+            ->method('fetchAllKeyValue')
+            ->with(self::stringContains('information_schema.TABLES'))
+            ->willReturn($existingTables);
 
         return $connection;
     }
@@ -120,7 +141,7 @@ final class TableCollationCheckListenerTest extends TestCase
         array $tableOptions,
         Connection $connection
     ): void {
-        (new TableCollationCheckListener(new MigrationRunContext($tableOptions), 'doctrine_migration_versions'))
+        (new TableCollationCheckListener(new MigrationRunContext($tableOptions)))
             ->onMigrationsMigrating(new MigrationsEventArgs(
                 $connection,
                 new MigrationPlanList([], Direction::UP),

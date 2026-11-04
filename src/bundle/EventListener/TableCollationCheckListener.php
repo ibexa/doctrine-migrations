@@ -16,10 +16,13 @@ use Ibexa\Contracts\DoctrineSchema\Database\DatabasePlatformResolver;
 use RuntimeException;
 
 /**
- * Stops a migrate on MySQL or MariaDB before any migration runs when the database already has tables and none of them
- * uses the collation new tables would get. A foreign key between string columns of different collations fails there,
- * and halfway through a run, since MySQL and MariaDB can't roll schema changes back: a new table referencing an
+ * Stops a migrate on MySQL or MariaDB before any migration runs when one of Ibexa's tables already in the database
+ * doesn't use the collation new tables would get. A foreign key between string columns of different collations fails
+ * there, and halfway through a run, since MySQL and MariaDB can't roll schema changes back: a new table referencing an
  * existing one (an oauth2 consent its user's login, a shopping list entry its product's code) would stop the run.
+ *
+ * Only Ibexa's tables count, the ones named "ez*" or "ibexa_*": a project keeps tables of its own in the same database,
+ * in whatever collation it likes, and no Ibexa foreign key points at them.
  */
 final class TableCollationCheckListener
 {
@@ -28,16 +31,15 @@ final class TableCollationCheckListener
      */
     private const FILE_COLLATION = 'utf8mb4_unicode_520_ci';
 
+    private const IBEXA_TABLE_PATTERN = '/^(ez|ibexa_)/';
+
+    private const LISTED_TABLES = 5;
+
     private MigrationRunContext $migrationRunContext;
 
-    private string $metadataTableName;
-
-    public function __construct(
-        MigrationRunContext $migrationRunContext,
-        string $metadataTableName
-    ) {
+    public function __construct(MigrationRunContext $migrationRunContext)
+    {
         $this->migrationRunContext = $migrationRunContext;
-        $this->metadataTableName = $metadataTableName;
     }
 
     public function onMigrationsMigrating(MigrationsEventArgs $args): void
@@ -48,34 +50,36 @@ final class TableCollationCheckListener
             return;
         }
 
-        // Doctrine's own table, created before this event and in DBAL's defaults, says nothing about the rest
-        $collations = $connection->fetchFirstColumn(
-            "SELECT DISTINCT TABLE_COLLATION FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE()
-                AND TABLE_TYPE = 'BASE TABLE' AND TABLE_COLLATION IS NOT NULL AND TABLE_NAME <> ?",
-            [$this->metadataTableName]
-        );
-        $collations = array_values(array_filter($collations, 'is_string'));
-
         $expected = self::normalize($this->getNewTableCollation());
-        foreach ($collations as $collation) {
+        $mismatched = [];
+        $tables = $connection->fetchAllKeyValue(
+            "SELECT TABLE_NAME, TABLE_COLLATION FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE()
+                AND TABLE_TYPE = 'BASE TABLE' AND TABLE_COLLATION IS NOT NULL ORDER BY TABLE_NAME"
+        );
+        foreach ($tables as $table => $collation) {
+            if (!is_string($collation) || preg_match(self::IBEXA_TABLE_PATTERN, (string)$table) !== 1) {
+                continue;
+            }
+
             $collation = self::normalize($collation);
             // MariaDB's charset-independent names ("uca1400_ai_ci") show with the charset in front
-            if ($collation === $expected || str_ends_with($collation, '_' . $expected)) {
-                return;
+            if ($collation !== $expected && !str_ends_with($collation, '_' . $expected)) {
+                $mismatched[] = sprintf('%s (%s)', $table, $collation);
             }
         }
 
-        if ($collations === []) {
+        if ($mismatched === []) {
             return;
         }
 
         throw new RuntimeException(sprintf(
-            'The tables in this database use %s, but the tables these migrations create would get %s, from '
-            . '"ibexa_doctrine_schema.tables.options" (DATABASE_CHARSET and DATABASE_COLLATION in the recipe). '
-            . 'A foreign key between string columns of different collations fails, so nothing was migrated. '
-            . 'Configure the collation the tables use, or convert the tables to the configured one first.',
-            implode(', ', $collations),
-            $expected
+            'Ibexa tables in this database use another collation than the %s the tables these migrations create '
+            . 'would get, from "ibexa_doctrine_schema.tables.options" (DATABASE_CHARSET and DATABASE_COLLATION in the '
+            . 'recipe): %s. A foreign key between string columns of different collations fails, so nothing was '
+            . 'migrated. Configure the collation those tables use, or convert them to the configured one first.',
+            $expected,
+            implode(', ', array_slice($mismatched, 0, self::LISTED_TABLES))
+                . (count($mismatched) > self::LISTED_TABLES ? sprintf(' and %d more', count($mismatched) - self::LISTED_TABLES) : '')
         ));
     }
 
