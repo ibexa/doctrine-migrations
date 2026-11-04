@@ -51,8 +51,6 @@ abstract class AbstractSqlMigration extends AbstractMigration
      */
     private const MYSQL_DEFAULT_TABLE_OPTIONS = 'DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_520_ci`';
 
-    private const MYSQL_DEFAULT_TABLE_CHARSET = 'utf8mb4';
-
     private ?string $resolvedPlatform = null;
 
     private MigrationRunContext $migrationRunContext;
@@ -197,8 +195,10 @@ abstract class AbstractSqlMigration extends AbstractMigration
     }
 
     /**
-     * Like DBAL, a charset configured without a collation gets the charset's "_unicode_ci" one. With neither configured
-     * the file's options stay, instead of DBAL's utf8 ones.
+     * Like DBAL, a charset configured without a collation gets the charset's "_unicode_ci" one. A collation configured
+     * without a charset goes on its own, and the server takes the charset from it: a charset guessed here may not fit
+     * it, and MariaDB's "uca1400_*" names don't start with one. With neither configured the file's options stay,
+     * instead of DBAL's utf8 ones.
      */
     private function applyConfiguredTableOptions(string $statement): string
     {
@@ -209,14 +209,11 @@ abstract class AbstractSqlMigration extends AbstractMigration
             return $statement;
         }
 
-        $charset ??= self::MYSQL_DEFAULT_TABLE_CHARSET;
-        $collation ??= $charset . '_unicode_ci';
+        $tableOptions = $charset === null
+            ? sprintf('COLLATE `%s`', $collation)
+            : sprintf('DEFAULT CHARACTER SET %s COLLATE `%s`', $charset, $collation ?? $charset . '_unicode_ci');
 
-        return str_replace(
-            self::MYSQL_DEFAULT_TABLE_OPTIONS,
-            sprintf('DEFAULT CHARACTER SET %s COLLATE `%s`', $charset, $collation),
-            $statement
-        );
+        return str_replace(self::MYSQL_DEFAULT_TABLE_OPTIONS, $tableOptions, $statement);
     }
 
     private function resolvePlatform(): ?string

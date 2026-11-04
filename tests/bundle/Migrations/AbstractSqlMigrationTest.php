@@ -203,8 +203,18 @@ final class AbstractSqlMigrationTest extends TestCase
         ];
         yield 'MySQL, collation preferred over collate' => [
             self::getMysqlPlatformClass(),
-            ['collate' => 'utf8mb4_bin', 'collation' => 'utf8mb4_general_ci'],
+            ['charset' => 'utf8mb4', 'collate' => 'utf8mb4_bin', 'collation' => 'utf8mb4_general_ci'],
             'DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_general_ci`',
+        ];
+        yield 'MySQL, collation only' => [
+            self::getMysqlPlatformClass(),
+            ['collate' => 'utf8mb3_general_ci'],
+            'COLLATE `utf8mb3_general_ci`',
+        ];
+        yield 'MariaDB, collation only without a charset prefix' => [
+            self::getMariadbPlatformClass(),
+            ['collation' => 'uca1400_ai_ci'],
+            'COLLATE `uca1400_ai_ci`',
         ];
         yield 'MySQL, charset only' => [
             self::getMysqlPlatformClass(),
