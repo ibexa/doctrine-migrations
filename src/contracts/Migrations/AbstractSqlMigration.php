@@ -45,6 +45,14 @@ abstract class AbstractSqlMigration extends AbstractMigration
         DatabasePlatformName::SQLITE => SqlPlatform::SQLITE,
     ];
 
+    /**
+     * The table options DBAL wrote into every MySQL and MariaDB CREATE TABLE of the SQL files, from the
+     * "ibexa_doctrine_schema.tables.options" a project gets by default.
+     */
+    private const MYSQL_DEFAULT_TABLE_OPTIONS = 'DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_520_ci`';
+
+    private const MYSQL_DEFAULT_TABLE_CHARSET = 'utf8mb4';
+
     private ?string $resolvedPlatform = null;
 
     private MigrationRunContext $migrationRunContext;
@@ -134,6 +142,9 @@ abstract class AbstractSqlMigration extends AbstractMigration
      * Loads a file containing one or more SQL statements separated by $delimiter (on its own
      * line) and queues each non-empty statement for execution via {@see addSql()}.
      *
+     * On MySQL and MariaDB, the file's default table options become the charset and collation configured in
+     * "ibexa_doctrine_schema.tables.options", which the SchemaBuilderEvent install applies to its tables too.
+     *
      * @param non-empty-string $delimiter
      */
     final protected function addSqlFile(
@@ -155,7 +166,7 @@ abstract class AbstractSqlMigration extends AbstractMigration
                 continue;
             }
 
-            $this->addSql($statement);
+            $this->addSql($this->applyConfiguredTableOptions($statement));
         }
     }
 
@@ -181,6 +192,29 @@ abstract class AbstractSqlMigration extends AbstractMigration
                 'Unsupported database platform. This migration only supports: %s.',
                 implode(', ', $supportedPlatforms)
             )
+        );
+    }
+
+    /**
+     * Like DBAL, a charset configured without a collation gets the charset's "_unicode_ci" one. With neither configured
+     * the file's options stay, instead of DBAL's utf8 ones.
+     */
+    private function applyConfiguredTableOptions(string $statement): string
+    {
+        $charset = $this->migrationRunContext->getTableCharset();
+        $collation = $this->migrationRunContext->getTableCollation();
+
+        if ((!$this->isMySQL() && !$this->isMariaDB()) || ($charset === null && $collation === null)) {
+            return $statement;
+        }
+
+        $charset ??= self::MYSQL_DEFAULT_TABLE_CHARSET;
+        $collation ??= $charset . '_unicode_ci';
+
+        return str_replace(
+            self::MYSQL_DEFAULT_TABLE_OPTIONS,
+            sprintf('DEFAULT CHARACTER SET %s COLLATE `%s`', $charset, $collation),
+            $statement
         );
     }
 
