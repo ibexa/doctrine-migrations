@@ -23,8 +23,8 @@ use RuntimeException;
  *
  * Only Ibexa's tables count, the ones named "ez*" or "ibexa_*": a project keeps tables of its own in the same database,
  * in whatever collation it likes, and no Ibexa foreign key points at them. Project tables that happen to be named like
- * Ibexa's go in "ibexa_doctrine_migrations.table_collation_check.ignored_tables", and "enabled: false" there turns the
- * check off.
+ * Ibexa's go in "ibexa_doctrine_migrations.table_collation_check.ignored_tables" (or "ignored_prefixes"), and
+ * "enabled: false" there turns the check off.
  */
 final class TableCollationCheckListener
 {
@@ -42,15 +42,21 @@ final class TableCollationCheckListener
     /** @var list<string> */
     private array $ignoredTables;
 
+    /** @var list<string> */
+    private array $ignoredPrefixes;
+
     /**
      * @param list<string> $ignoredTables table names, "*" matching any characters
+     * @param list<string> $ignoredPrefixes
      */
     public function __construct(
         MigrationRunContext $migrationRunContext,
-        array $ignoredTables = []
+        array $ignoredTables = [],
+        array $ignoredPrefixes = []
     ) {
         $this->migrationRunContext = $migrationRunContext;
         $this->ignoredTables = $ignoredTables;
+        $this->ignoredPrefixes = $ignoredPrefixes;
     }
 
     public function onMigrationsMigrating(MigrationsEventArgs $args): void
@@ -88,7 +94,8 @@ final class TableCollationCheckListener
             . 'would get, from "ibexa_doctrine_schema.tables.options" (DATABASE_CHARSET and DATABASE_COLLATION in the '
             . 'recipe): %s. A foreign key between string columns of different collations fails, so nothing was '
             . 'migrated. Configure the collation those tables use, or convert them to the configured one first. '
-            . 'Tables Ibexa doesn\'t own go in "ibexa_doctrine_migrations.table_collation_check.ignored_tables".',
+            . 'Tables Ibexa doesn\'t own go in "ibexa_doctrine_migrations.table_collation_check.ignored_tables" or '
+            . '"ignored_prefixes".',
             $expected,
             implode(', ', array_slice($mismatched, 0, self::LISTED_TABLES))
                 . (count($mismatched) > self::LISTED_TABLES ? sprintf(' and %d more', count($mismatched) - self::LISTED_TABLES) : '')
@@ -103,6 +110,12 @@ final class TableCollationCheckListener
 
         foreach ($this->ignoredTables as $ignoredTable) {
             if (fnmatch($ignoredTable, $table)) {
+                return false;
+            }
+        }
+
+        foreach ($this->ignoredPrefixes as $ignoredPrefix) {
+            if (str_starts_with($table, $ignoredPrefix)) {
                 return false;
             }
         }

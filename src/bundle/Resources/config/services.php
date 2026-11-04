@@ -82,6 +82,7 @@ return static function (ContainerConfigurator $containerConfigurator): void {
         ->args([
             service(MigrationRunContext::class),
             param(IbexaDoctrineMigrationsExtension::TABLE_COLLATION_CHECK_IGNORED_TABLES),
+            param(IbexaDoctrineMigrationsExtension::TABLE_COLLATION_CHECK_IGNORED_PREFIXES),
         ]);
 
     $services->set(EventDispatcherFactory::class)

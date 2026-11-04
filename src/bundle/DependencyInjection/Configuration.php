@@ -35,6 +35,11 @@ final class Configuration implements ConfigurationInterface
                             ->example(['ezcustom_report', 'ibexa_app_*'])
                             ->scalarPrototype()->cannotBeEmpty()->end()
                         ->end()
+                        ->arrayNode('ignored_prefixes')
+                            ->info('Prefixes of tables named like Ibexa\'s that Ibexa doesn\'t own.')
+                            ->example(['ezcustom_', 'ibexa_app_'])
+                            ->scalarPrototype()->cannotBeEmpty()->end()
+                        ->end()
                     ->end()
                 ->end()
             ->end();
