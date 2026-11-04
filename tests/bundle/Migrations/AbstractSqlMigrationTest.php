@@ -10,7 +10,10 @@ namespace Ibexa\Tests\Bundle\DoctrineMigrations\Migrations;
 
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
+use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\Exception\AbortMigration;
+use Doctrine\Migrations\Exception\SkipMigration;
+use Ibexa\Contracts\DoctrineMigrations\Migrations\MigrationRunContext;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\SqlPlatform;
 use Ibexa\Tests\Bundle\DoctrineMigrations\Fixtures\ConcreteAbstractSqlMigration;
 use PHPUnit\Framework\TestCase;
@@ -91,6 +94,46 @@ final class AbstractSqlMigrationTest extends TestCase
         yield 'MariaDB' => [self::getMariadbPlatformClass(), false];
         yield 'PostgreSQL' => [self::getPostgresqlPlatformClass(), true];
         yield 'SQLite' => [self::getSqlitePlatformClass(), true];
+    }
+
+    public function testPostUpSkipsAMigrationWithoutSqlInADryRun(): void
+    {
+        $context = new MigrationRunContext();
+        $context->setDryRun(true);
+        $migration = $this->buildMigration($this->createMock(self::getMysqlPlatformClass()), $context);
+
+        $this->expectException(SkipMigration::class);
+        $this->expectExceptionMessage('Nothing to do against the schema from before this dry run');
+
+        $migration->postUp(new Schema());
+    }
+
+    /**
+     * @dataProvider provideRunsThatKeepTheMigration
+     */
+    public function testPostUpKeepsTheMigration(
+        bool $dryRun,
+        bool $withSql
+    ): void {
+        $context = new MigrationRunContext();
+        $context->setDryRun($dryRun);
+        $migration = $this->buildMigration($this->createMock(self::getMysqlPlatformClass()), $context);
+        if ($withSql) {
+            $migration->addSqlFilePublic(__DIR__ . '/../Fixtures/sql/statements.sql');
+        }
+
+        $migration->postUp(new Schema());
+
+        self::assertCount($withSql ? 2 : 0, $this->getQueuedStatements($migration));
+    }
+
+    /**
+     * @return iterable<string, array{bool, bool}>
+     */
+    public static function provideRunsThatKeepTheMigration(): iterable
+    {
+        yield 'dry run with SQL' => [true, true];
+        yield 'real run without SQL' => [false, false];
     }
 
     public function testAddSqlFileQueuesEachNonEmptyStatement(): void
@@ -184,12 +227,14 @@ final class AbstractSqlMigrationTest extends TestCase
         ));
     }
 
-    private function buildMigration(AbstractPlatform $platform): ConcreteAbstractSqlMigration
-    {
+    private function buildMigration(
+        AbstractPlatform $platform,
+        ?MigrationRunContext $migrationRunContext = null
+    ): ConcreteAbstractSqlMigration {
         $connection = $this->createMock(Connection::class);
         $connection->method('getDatabasePlatform')->willReturn($platform);
 
-        return new ConcreteAbstractSqlMigration($connection, new NullLogger());
+        return new ConcreteAbstractSqlMigration($connection, new NullLogger(), $migrationRunContext ?? new MigrationRunContext());
     }
 
     /**

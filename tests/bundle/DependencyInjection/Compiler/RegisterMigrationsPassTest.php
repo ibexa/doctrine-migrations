@@ -19,6 +19,7 @@ use Ibexa\Bundle\DoctrineMigrations\DependencyInjection\Compiler\RegisterMigrati
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaMigrationTag;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaOnlyDependencyFactory;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaOnlyMigrationsRepository;
+use Ibexa\Contracts\DoctrineMigrations\Migrations\MigrationRunContext;
 use Ibexa\DoctrineMigrations\Migration\ServiceMigrationsRepository;
 use Ibexa\Tests\Bundle\DoctrineMigrations\Fixtures\IbexaMigrationV500A;
 use Ibexa\Tests\Bundle\DoctrineMigrations\Fixtures\IbexaMigrationV500B;
@@ -97,6 +98,22 @@ final class RegisterMigrationsPassTest extends TestCase
         [$loggerValue] = $loggerBinding->getValues();
         self::assertInstanceOf(Reference::class, $loggerValue);
         self::assertSame('ibexa.doctrine_migrations.logger', (string) $loggerValue);
+    }
+
+    public function testMigrationRunContextBindingIsAddedToTaggedMigrations(): void
+    {
+        $container = $this->buildBaseContainer();
+        $container->register(IbexaMigrationV500A::class, IbexaMigrationV500A::class)
+            ->addTag(IbexaMigrationTag::TAG);
+
+        (new RegisterMigrationsPass())->process($container);
+
+        $bindings = $container->getDefinition(IbexaMigrationV500A::class)->getBindings();
+
+        self::assertArrayHasKey(MigrationRunContext::class, $bindings);
+        [$migrationRunContextValue] = $bindings[MigrationRunContext::class]->getValues();
+        self::assertInstanceOf(Reference::class, $migrationRunContextValue);
+        self::assertSame(MigrationRunContext::class, (string) $migrationRunContextValue);
     }
 
     public function testConnectionAndLoggerServicesAreFactoredFromApplicationDependencyFactory(): void
