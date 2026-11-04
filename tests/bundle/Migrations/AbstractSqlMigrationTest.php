@@ -160,6 +160,72 @@ final class AbstractSqlMigrationTest extends TestCase
         );
     }
 
+    /**
+     * @dataProvider provideTableOptions
+     *
+     * @param class-string<AbstractPlatform> $platformClass
+     * @param array<string, scalar|null> $tableOptions
+     */
+    public function testAddSqlFileAppliesConfiguredTableOptions(
+        string $platformClass,
+        array $tableOptions,
+        string $expectedTableOptions
+    ): void {
+        $migration = $this->buildMigration($this->createMock($platformClass), new MigrationRunContext($tableOptions));
+
+        $migration->addSqlFilePublic(__DIR__ . '/../Fixtures/sql/create-table.sql');
+
+        self::assertSame(
+            [
+                "CREATE TABLE one (\n    id INT NOT NULL,\n    PRIMARY KEY(id)\n) $expectedTableOptions ENGINE = InnoDB;",
+                'ALTER TABLE one ADD name VARCHAR(190) NOT NULL;',
+            ],
+            $this->getQueuedStatements($migration),
+        );
+    }
+
+    /**
+     * @return iterable<string, array{class-string<AbstractPlatform>, array<string, scalar|null>, string}>
+     */
+    public static function provideTableOptions(): iterable
+    {
+        $fileOptions = 'DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_520_ci`';
+
+        yield 'MySQL, charset and collate' => [
+            self::getMysqlPlatformClass(),
+            ['charset' => 'utf8mb3', 'collate' => 'utf8mb3_general_ci'],
+            'DEFAULT CHARACTER SET utf8mb3 COLLATE `utf8mb3_general_ci`',
+        ];
+        yield 'MariaDB, charset and collate' => [
+            self::getMariadbPlatformClass(),
+            ['charset' => 'utf8mb3', 'collate' => 'utf8mb3_general_ci'],
+            'DEFAULT CHARACTER SET utf8mb3 COLLATE `utf8mb3_general_ci`',
+        ];
+        yield 'MySQL, collation preferred over collate' => [
+            self::getMysqlPlatformClass(),
+            ['charset' => 'utf8mb4', 'collate' => 'utf8mb4_bin', 'collation' => 'utf8mb4_general_ci'],
+            'DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_general_ci`',
+        ];
+        yield 'MySQL, collation only' => [
+            self::getMysqlPlatformClass(),
+            ['collate' => 'utf8mb3_general_ci'],
+            'COLLATE `utf8mb3_general_ci`',
+        ];
+        yield 'MariaDB, collation only without a charset prefix' => [
+            self::getMariadbPlatformClass(),
+            ['collation' => 'uca1400_ai_ci'],
+            'COLLATE `uca1400_ai_ci`',
+        ];
+        yield 'MySQL, charset only' => [
+            self::getMysqlPlatformClass(),
+            ['charset' => 'utf8mb3'],
+            'DEFAULT CHARACTER SET utf8mb3 COLLATE `utf8mb3_unicode_ci`',
+        ];
+        yield 'MySQL, nothing configured' => [self::getMysqlPlatformClass(), [], $fileOptions];
+        yield 'MySQL, empty values' => [self::getMysqlPlatformClass(), ['charset' => '', 'collate' => ''], $fileOptions];
+        yield 'PostgreSQL' => [self::getPostgresqlPlatformClass(), ['collate' => 'utf8mb4_general_ci'], $fileOptions];
+    }
+
     public function testAddSqlFileThrowsWhenFileDoesNotExist(): void
     {
         $migration = $this->buildMigration($this->createMock(self::getMysqlPlatformClass()));

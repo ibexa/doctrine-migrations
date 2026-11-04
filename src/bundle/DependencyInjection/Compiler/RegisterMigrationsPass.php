@@ -41,7 +41,8 @@ use Symfony\Component\DependencyInjection\TypedReference;
  * DoctrineMigrationsBundle) via two Ibexa-owned services, "ibexa.doctrine_migrations.connection"
  * and "ibexa.doctrine_migrations.logger" — never via DoctrineMigrationsBundle's own
  * "doctrine.migrations.connection"/"doctrine.migrations.logger" aliases, since those are removed
- * from the container entirely when "enable_service_migrations" is false.
+ * from the container entirely when "enable_service_migrations" is false. The {@see MigrationRunContext} gets the
+ * table options configured in "ibexa_doctrine_schema.tables.options", when ibexa/doctrine-schema's bundle sets them.
  *
  * This pass never touches the application's own {@code doctrine.migrations.dependency_factory}
  * or its {@code MigrationsRepository}/{@code Comparator} — Ibexa's migrations are visible
@@ -60,6 +61,8 @@ use Symfony\Component\DependencyInjection\TypedReference;
  */
 final class RegisterMigrationsPass implements CompilerPassInterface
 {
+    private const TABLE_OPTIONS_PARAMETER = 'ibexa.schema.default_table_options';
+
     public function process(ContainerBuilder $container): void
     {
         if (!$container->hasDefinition(IbexaOnlyMigrationsRepository::SERVICE_ID)) {
@@ -80,6 +83,11 @@ final class RegisterMigrationsPass implements CompilerPassInterface
         $container->register('ibexa.doctrine_migrations.logger', LoggerInterface::class)
             ->setPublic(false)
             ->setFactory([new Reference('doctrine.migrations.dependency_factory'), 'getLogger']);
+
+        if ($container->hasDefinition(MigrationRunContext::class) && $container->hasParameter(self::TABLE_OPTIONS_PARAMETER)) {
+            $container->getDefinition(MigrationRunContext::class)
+                ->setArgument('$tableOptions', '%' . self::TABLE_OPTIONS_PARAMETER . '%');
+        }
 
         $migrationRefs = [];
 

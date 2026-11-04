@@ -116,6 +116,30 @@ final class RegisterMigrationsPassTest extends TestCase
         self::assertSame(MigrationRunContext::class, (string) $migrationRunContextValue);
     }
 
+    public function testMigrationRunContextGetsConfiguredTableOptions(): void
+    {
+        $container = $this->buildBaseContainer();
+        $container->register(MigrationRunContext::class, MigrationRunContext::class);
+        $container->setParameter('ibexa.schema.default_table_options', ['collate' => 'utf8mb4_general_ci']);
+
+        (new RegisterMigrationsPass())->process($container);
+
+        self::assertSame(
+            ['$tableOptions' => '%ibexa.schema.default_table_options%'],
+            $container->getDefinition(MigrationRunContext::class)->getArguments(),
+        );
+    }
+
+    public function testMigrationRunContextGetsNoTableOptionsWithoutDoctrineSchemaParameter(): void
+    {
+        $container = $this->buildBaseContainer();
+        $container->register(MigrationRunContext::class, MigrationRunContext::class);
+
+        (new RegisterMigrationsPass())->process($container);
+
+        self::assertSame([], $container->getDefinition(MigrationRunContext::class)->getArguments());
+    }
+
     public function testConnectionAndLoggerServicesAreFactoredFromApplicationDependencyFactory(): void
     {
         $container = $this->buildBaseContainer();
