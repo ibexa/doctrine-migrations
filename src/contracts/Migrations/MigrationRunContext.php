@@ -9,10 +9,9 @@ declare(strict_types=1);
 namespace Ibexa\Contracts\DoctrineMigrations\Migrations;
 
 /**
- * What Doctrine Migrations doesn't tell a migration about its run: whether the running "ibexa:doctrine:migrations:*"
- * command was given --dry-run (the bundle's console subscriber records it here for
- * {@see AbstractSqlMigration::isDryRun()}), and the table charset and collation configured in
- * "ibexa_doctrine_schema.tables.options" (for {@see AbstractSqlMigration::addSqlFile()}).
+ * What Doctrine Migrations doesn't tell a migration about its run: whether it executes the migration in a dry run
+ * (the bundle's DryRunListener records it here for {@see AbstractSqlMigration::isDryRun()}), and the table charset
+ * and collation configured in "ibexa_doctrine_schema.tables.options" (for {@see AbstractSqlMigration::addSqlFile()}).
  *
  * @internal for internal use by Ibexa 1st party packages
  */

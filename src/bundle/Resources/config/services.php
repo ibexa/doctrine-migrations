@@ -10,11 +10,12 @@ use Doctrine\Migrations\Configuration\Configuration;
 use Doctrine\Migrations\Configuration\Connection\ExistingConnection;
 use Doctrine\Migrations\Configuration\Migration\ExistingConfiguration;
 use Doctrine\Migrations\DependencyFactory;
+use Doctrine\Migrations\Events;
 use Doctrine\Migrations\MigrationsRepository;
 use Doctrine\Migrations\Version\Comparator;
 use Ibexa\Bundle\DoctrineMigrations\Comparator\IbexaMigrationComparator;
 use Ibexa\Bundle\DoctrineMigrations\Configuration\IbexaMigrationConfigurationFactory;
-use Ibexa\Bundle\DoctrineMigrations\EventSubscriber\DryRunSubscriber;
+use Ibexa\Bundle\DoctrineMigrations\EventListener\DryRunListener;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaOnlyDependencyFactory;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaOnlyMigrationsRepository;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\MigrationRunContext;
@@ -68,7 +69,9 @@ return static function (ContainerConfigurator $containerConfigurator): void {
 
     $services->set(MigrationRunContext::class);
 
-    $services->set(DryRunSubscriber::class)
+    // IbexaOnlyDependencyFactory dispatches its events through the event manager of "ibexa.persistence.connection",
+    // which is one of the application's Doctrine connections
+    $services->set(DryRunListener::class)
         ->args([service(MigrationRunContext::class)])
-        ->tag('kernel.event_subscriber');
+        ->tag('doctrine.event_listener', ['event' => Events::onMigrationsVersionExecuting]);
 };
