@@ -50,17 +50,17 @@ abstract class AbstractSqlMigration extends AbstractMigration
     private MigrationRunContext $migrationRunContext;
 
     /**
-     * RegisterMigrationsPass binds $migrationRunContext for every migration service; a migration created without it
-     * never runs in a dry run.
+     * RegisterMigrationsPass binds $migrationRunContext for every migration service. It's required, so a migration with
+     * a constructor of its own can't leave it out and silently never see a dry run.
      */
     public function __construct(
         Connection $connection,
         LoggerInterface $logger,
-        ?MigrationRunContext $migrationRunContext = null
+        MigrationRunContext $migrationRunContext
     ) {
         parent::__construct($connection, $logger);
 
-        $this->migrationRunContext = $migrationRunContext ?? new MigrationRunContext();
+        $this->migrationRunContext = $migrationRunContext;
     }
 
     /**

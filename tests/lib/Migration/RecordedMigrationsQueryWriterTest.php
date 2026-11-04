@@ -24,6 +24,7 @@ use Doctrine\Migrations\QueryWriter;
 use Doctrine\Migrations\Version\Direction;
 use Doctrine\Migrations\Version\ExecutionResult;
 use Doctrine\Migrations\Version\Version;
+use Ibexa\Contracts\DoctrineMigrations\Migrations\MigrationRunContext;
 use Ibexa\DoctrineMigrations\Migration\RecordedMigrations;
 use Ibexa\DoctrineMigrations\Migration\RecordedMigrationsQueryWriter;
 use Ibexa\Tests\Bundle\DoctrineMigrations\Fixtures\ConcreteAbstractSqlMigration;
@@ -78,7 +79,7 @@ final class RecordedMigrationsQueryWriterTest extends TestCase
     ): void {
         $plan = new MigrationPlan(
             new Version($version),
-            new ConcreteAbstractSqlMigration($this->createStub(Connection::class), new NullLogger()),
+            new ConcreteAbstractSqlMigration($this->createStub(Connection::class), new NullLogger(), new MigrationRunContext()),
             Direction::UP
         );
         $plan->markAsExecuted(new ExecutionResult(new Version($version), Direction::UP, new DateTimeImmutable('2026-10-27 12:00:00')));

@@ -234,7 +234,7 @@ final class AbstractSqlMigrationTest extends TestCase
         $connection = $this->createMock(Connection::class);
         $connection->method('getDatabasePlatform')->willReturn($platform);
 
-        return new ConcreteAbstractSqlMigration($connection, new NullLogger(), $migrationRunContext);
+        return new ConcreteAbstractSqlMigration($connection, new NullLogger(), $migrationRunContext ?? new MigrationRunContext());
     }
 
     /**
