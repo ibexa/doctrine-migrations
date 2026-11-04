@@ -14,6 +14,7 @@ use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaOnlyDependencyFactory;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaOnlyMigrationsRepository;
 use Ibexa\DoctrineMigrations\Migration\ServiceMigrationsRepository;
 use Ibexa\Tests\Integration\DoctrineMigrations\Fixtures\IntegrationTestMigration;
+use Ibexa\Tests\Integration\DoctrineMigrations\Fixtures\NothingToDoMigration;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 final class IbexaDoctrineMigrationsIntegrationTest extends KernelTestCase
@@ -46,8 +47,10 @@ final class IbexaDoctrineMigrationsIntegrationTest extends KernelTestCase
 
         $items = $repo->getMigrations()->getItems();
 
-        self::assertCount(1, $items);
-        self::assertSame(IntegrationTestMigration::class, (string) $items[0]->getVersion());
+        // the set isn't sorted; Doctrine's comparator orders it later
+        $versions = array_map(static fn ($item): string => (string) $item->getVersion(), $items);
+        sort($versions);
+        self::assertSame([IntegrationTestMigration::class, NothingToDoMigration::class], $versions);
     }
 
     public function testIbexaOnlyDependencyFactoryIsAvailableInContainer(): void
