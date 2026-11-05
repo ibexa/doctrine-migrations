@@ -53,8 +53,16 @@ final class DryRunIntegrationTest extends KernelTestCase
         self::assertEquals(
             1,
             $connection->fetchOne(
-                'SELECT COUNT(*) FROM doctrine_migration_versions WHERE version = ?',
+                'SELECT COUNT(*) FROM ibexa_doctrine_migration_versions WHERE version = ?',
                 [NothingToDoMigration::class]
+            )
+        );
+        // The application's own versions table is never shared with Ibexa's.
+        self::assertEquals(
+            0,
+            $connection->fetchOne(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = ?",
+                ['doctrine_migration_versions']
             )
         );
     }
