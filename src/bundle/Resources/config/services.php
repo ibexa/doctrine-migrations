@@ -11,11 +11,13 @@ use Doctrine\Migrations\Configuration\Connection\ExistingConnection;
 use Doctrine\Migrations\Configuration\Migration\ExistingConfiguration;
 use Doctrine\Migrations\DependencyFactory;
 use Doctrine\Migrations\EventDispatcher;
+use Doctrine\Migrations\Metadata\Storage\MetadataStorage;
 use Doctrine\Migrations\MigrationsRepository;
 use Doctrine\Migrations\Version\Comparator;
 use Ibexa\Bundle\DoctrineMigrations\Comparator\IbexaMigrationComparator;
 use Ibexa\Bundle\DoctrineMigrations\Configuration\EventDispatcherFactory;
 use Ibexa\Bundle\DoctrineMigrations\Configuration\IbexaMigrationConfigurationFactory;
+use Ibexa\Bundle\DoctrineMigrations\Configuration\MetadataStorageFactory;
 use Ibexa\Bundle\DoctrineMigrations\EventListener\DryRunListener;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaOnlyDependencyFactory;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaOnlyMigrationsRepository;
@@ -45,10 +47,13 @@ return static function (ContainerConfigurator $containerConfigurator): void {
 
     // Independent copy of the application's own DependencyFactory — a clone of the application's
     // Configuration (see IbexaMigrationConfigurationFactory; carries an Ibexa-specific migration
-    // template instead of the application's own) and the same logger, but always running against
-    // "ibexa.persistence.connection" (created by ibexa/core) and using the Ibexa-only repository
-    // above — see IbexaOnlyDependencyFactory. The two abstract_arg placeholders (both standing in
-    // for the application's own DependencyFactory) are replaced by RegisterMigrationsPass.
+    // template instead of the application's own, and records executed versions in
+    // "ibexa_doctrine_migration_versions" instead of the application's table) and the same logger,
+    // but always running against "ibexa.persistence.connection" (created by ibexa/core) and using
+    // the Ibexa-only repository above — see IbexaOnlyDependencyFactory. Its metadata storage takes
+    // over the Ibexa versions earlier releases recorded in the application's table — see
+    // MetadataStorageFactory. The abstract_arg placeholders (all standing in for the application's
+    // own DependencyFactory) are replaced by RegisterMigrationsPass.
     $services->set(IbexaOnlyDependencyFactory::SERVICE_ID, DependencyFactory::class)
         ->factory([DependencyFactory::class, 'fromConnection'])
         ->args([
@@ -65,7 +70,8 @@ return static function (ContainerConfigurator $containerConfigurator): void {
         ])
         ->call('setService', [MigrationsRepository::class, service(IbexaOnlyMigrationsRepository::SERVICE_ID)])
         ->call('setService', [Comparator::class, service(IbexaMigrationComparator::class)])
-        ->call('setDefinition', [EventDispatcher::class, [service(EventDispatcherFactory::class), 'create']]);
+        ->call('setDefinition', [EventDispatcher::class, [service(EventDispatcherFactory::class), 'create']])
+        ->call('setDefinition', [MetadataStorage::class, [service(MetadataStorageFactory::class), 'create']]);
 
     $services->set(IbexaMigrationComparator::class);
 
@@ -73,6 +79,9 @@ return static function (ContainerConfigurator $containerConfigurator): void {
 
     $services->set(DryRunListener::class)
         ->args([service(MigrationRunContext::class)]);
+
+    $services->set(MetadataStorageFactory::class)
+        ->args([abstract_arg('the application\'s doctrine.migrations.dependency_factory service')]);
 
     $services->set(EventDispatcherFactory::class)
         ->args([service(DryRunListener::class)]);

@@ -10,6 +10,7 @@ namespace Ibexa\Bundle\DoctrineMigrations\DependencyInjection\Compiler;
 
 use Doctrine\DBAL\Connection;
 use Ibexa\Bundle\DoctrineMigrations\Configuration\IbexaMigrationConfigurationFactory;
+use Ibexa\Bundle\DoctrineMigrations\Configuration\MetadataStorageFactory;
 use Ibexa\Bundle\RepositoryInstaller\Migration\TaggedMigrationsRunner;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\AbstractSqlMigration;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaMigrationTag;
@@ -55,9 +56,12 @@ use Symfony\Component\DependencyInjection\TypedReference;
  * application's DependencyFactory that always runs against the "ibexa.persistence.connection"
  * service (assumed to exist; it's created by ibexa/core) and uses the Ibexa-only repository above
  * — has its Configuration built from the application's own by
- * {@see IbexaMigrationConfigurationFactory} (a
- * clone carrying an Ibexa-specific migration template, never the exact same instance) and its
- * logger fetched directly from the application's own "doctrine.migrations.dependency_factory".
+ * {@see IbexaMigrationConfigurationFactory} (a clone carrying an Ibexa-specific migration template
+ * and recording executed versions in "ibexa_doctrine_migration_versions" instead of the
+ * application's table, never the exact same instance) and its logger fetched directly from the
+ * application's own "doctrine.migrations.dependency_factory". Its metadata storage is built by
+ * {@see MetadataStorageFactory}, which gets the application's DependencyFactory too, to take over
+ * the Ibexa versions earlier releases recorded in the application's table.
  */
 final class RegisterMigrationsPass implements CompilerPassInterface
 {
@@ -125,6 +129,13 @@ final class RegisterMigrationsPass implements CompilerPassInterface
             if ($loggerDefinition instanceof Definition) {
                 $loggerDefinition->setFactory([new Reference('doctrine.migrations.dependency_factory'), 'getLogger']);
             }
+        }
+
+        // Builds the Ibexa-only DependencyFactory's metadata storage, which reads (and moves out)
+        // the Ibexa versions earlier releases recorded in the application's table.
+        if ($container->hasDefinition(MetadataStorageFactory::class)) {
+            $container->getDefinition(MetadataStorageFactory::class)
+                ->replaceArgument(0, new Reference('doctrine.migrations.dependency_factory'));
         }
     }
 }

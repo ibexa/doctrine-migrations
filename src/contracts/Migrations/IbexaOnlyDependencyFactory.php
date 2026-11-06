@@ -23,7 +23,8 @@ use Doctrine\Migrations\MigrationsRepository;
  * {@see Connection}, and its {@see MigrationsRepository} is always the one identified by
  * {@see IbexaOnlyMigrationsRepository::SERVICE_ID}. Every other dependency it lazily builds
  * (metadata storage, migrator, plan calculator, version comparator, ...) is a fresh instance,
- * built from those, and shared by nothing else.
+ * built from those, and shared by nothing else. Its metadata storage also takes over the Ibexa
+ * versions that earlier releases recorded in the application's own table.
  *
  * Being an entirely separate {@see DependencyFactory} instance, replacing its MigrationsRepository
  * (or any other dependency) never affects the application's own, and vice versa; and being

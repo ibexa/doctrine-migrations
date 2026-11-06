@@ -37,30 +37,28 @@ final class IbexaMigrationConfigurationFactoryTest extends TestCase
     }
 
     /**
-     * @return iterable<string, array{TableMetadataStorageConfiguration|null}>
+     * @return iterable<string, array{Configuration, string|null}>
      */
-    public static function provideApplicationMetadataStorageConfigurations(): iterable
+    public static function provideApplicationConfigurations(): iterable
     {
-        yield 'application keeps Doctrine\'s default table' => [null];
+        yield 'application keeps Doctrine\'s default table' => [new Configuration(), null];
 
-        $custom = new TableMetadataStorageConfiguration();
-        $custom->setTableName('app_migration_versions');
-        $custom->setVersionColumnName('app_version');
-        yield 'application names its own table and columns' => [$custom];
+        $metadataStorageConfiguration = new TableMetadataStorageConfiguration();
+        $metadataStorageConfiguration->setTableName('app_migration_versions');
+        $metadataStorageConfiguration->setVersionColumnName('app_version');
+        $configuration = new Configuration();
+        $configuration->setMetadataStorageConfiguration($metadataStorageConfiguration);
+        yield 'application names its own table and columns' => [$configuration, 'app_migration_versions'];
     }
 
     /**
-     * @dataProvider provideApplicationMetadataStorageConfigurations
+     * @dataProvider provideApplicationConfigurations
      */
-    public function testRecordsVersionsInATableOfItsOwn(?TableMetadataStorageConfiguration $applicationMetadataStorageConfiguration): void
-    {
-        $applicationConfiguration = new Configuration();
-        if ($applicationMetadataStorageConfiguration !== null) {
-            $applicationConfiguration->setMetadataStorageConfiguration($applicationMetadataStorageConfiguration);
-        }
-        $applicationTableName = $applicationMetadataStorageConfiguration !== null
-            ? $applicationMetadataStorageConfiguration->getTableName()
-            : null;
+    public function testRecordsVersionsInATableOfItsOwn(
+        Configuration $applicationConfiguration,
+        ?string $applicationTableName
+    ): void {
+        $applicationMetadataStorageConfiguration = $applicationConfiguration->getMetadataStorageConfiguration();
 
         $ibexaConfiguration = $this->createFromApplicationConfiguration($applicationConfiguration);
 
@@ -71,9 +69,12 @@ final class IbexaMigrationConfigurationFactoryTest extends TestCase
 
         // The application's own metadata storage configuration is neither replaced nor modified.
         self::assertSame($applicationMetadataStorageConfiguration, $applicationConfiguration->getMetadataStorageConfiguration());
-        if ($applicationMetadataStorageConfiguration !== null) {
-            self::assertSame($applicationTableName, $applicationMetadataStorageConfiguration->getTableName());
-        }
+        self::assertSame(
+            $applicationTableName,
+            $applicationMetadataStorageConfiguration instanceof TableMetadataStorageConfiguration
+                ? $applicationMetadataStorageConfiguration->getTableName()
+                : null
+        );
     }
 
     private function createFromApplicationConfiguration(Configuration $applicationConfiguration): Configuration
