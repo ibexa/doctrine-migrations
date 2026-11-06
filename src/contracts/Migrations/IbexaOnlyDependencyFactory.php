@@ -17,12 +17,14 @@ use Doctrine\Migrations\MigrationsRepository;
  * Holds the service ID of a {@see DependencyFactory} that behaves like the application's own
  * "doctrine.migrations.dependency_factory" — a clone of its {@see Configuration} (carrying an
  * Ibexa-specific migration template, so "ibexa:doctrine:migrations:generate"/"...:diff" scaffold
- * classes shaped like real Ibexa migrations, never the application's own default stub) and the
- * same logger — except it always runs against the "ibexa.persistence.connection"
+ * classes shaped like real Ibexa migrations, never the application's own default stub, and
+ * recording executed versions in "ibexa_doctrine_migration_versions", never in the application's
+ * own table) and the same logger — except it always runs against the "ibexa.persistence.connection"
  * {@see Connection}, and its {@see MigrationsRepository} is always the one identified by
  * {@see IbexaOnlyMigrationsRepository::SERVICE_ID}. Every other dependency it lazily builds
  * (metadata storage, migrator, plan calculator, version comparator, ...) is a fresh instance,
- * built from those, and shared by nothing else.
+ * built from those, and shared by nothing else. Its metadata storage also takes over the Ibexa
+ * versions that earlier releases recorded in the application's own table.
  *
  * Being an entirely separate {@see DependencyFactory} instance, replacing its MigrationsRepository
  * (or any other dependency) never affects the application's own, and vice versa; and being

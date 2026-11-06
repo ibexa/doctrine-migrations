@@ -15,6 +15,7 @@ use Doctrine\Migrations\Configuration\Migration\ExistingConfiguration;
 use Doctrine\Migrations\DependencyFactory;
 use Doctrine\Migrations\MigrationsRepository;
 use Ibexa\Bundle\DoctrineMigrations\Configuration\IbexaMigrationConfigurationFactory;
+use Ibexa\Bundle\DoctrineMigrations\Configuration\MetadataStorageFactory;
 use Ibexa\Bundle\DoctrineMigrations\DependencyInjection\Compiler\RegisterMigrationsPass;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaMigrationTag;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaOnlyDependencyFactory;
@@ -250,6 +251,19 @@ final class RegisterMigrationsPassTest extends TestCase
         $connectionArg = $existingConnectionDefinition->getArgument(0);
         self::assertInstanceOf(Reference::class, $connectionArg);
         self::assertSame('ibexa.persistence.connection', (string) $connectionArg);
+    }
+
+    public function testMetadataStorageFactoryGetsTheApplicationDependencyFactory(): void
+    {
+        $container = $this->buildBaseContainer();
+        $container->register(MetadataStorageFactory::class, MetadataStorageFactory::class)
+            ->addArgument(new AbstractArgument('the application\'s doctrine.migrations.dependency_factory service'));
+
+        (new RegisterMigrationsPass())->process($container);
+
+        $applicationFactoryArgument = $container->getDefinition(MetadataStorageFactory::class)->getArgument(0);
+        self::assertInstanceOf(Reference::class, $applicationFactoryArgument);
+        self::assertSame('doctrine.migrations.dependency_factory', (string) $applicationFactoryArgument);
     }
 
     public function testPassIsNoOpForIbexaOnlyDependencyFactoryWhenNotDefined(): void
