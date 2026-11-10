@@ -78,8 +78,6 @@ return static function (ContainerConfigurator $containerConfigurator): void {
     $services->set(EventDispatcherFactory::class)
         ->args([service(DryRunListener::class)]);
 
-    // A project's "schema_filter" on that connection would otherwise hide the Ibexa tables from the
-    // "ibexa:doctrine:migrations:*" commands.
     $services->set(SchemaAssetsFilterSubscriber::class)
         ->args([service('ibexa.persistence.connection')])
         ->tag('kernel.event_subscriber');

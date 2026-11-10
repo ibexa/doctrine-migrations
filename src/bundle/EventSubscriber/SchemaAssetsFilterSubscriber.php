@@ -14,15 +14,7 @@ use Symfony\Component\Console\Event\ConsoleCommandEvent;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
 /**
- * Lifts the Ibexa connection's schema assets filter while an "ibexa:doctrine:migrations:*" command
- * runs.
- *
- * Projects using Doctrine ORM may set a "schema_filter" on that connection that hides the Ibexa
- * tables, so that doctrine:schema:update leaves them alone. Doctrine Migrations reads the schema
- * through the same connection, so the Schema each migration gets lacked those tables and the
- * migrations' guards misread it: an install migration ran its CREATE TABLE statements against an
- * existing database, and a migration skipping a missing table did nothing but was recorded as
- * executed.
+ * Lifts the Ibexa connection's schema assets filter while an "ibexa:doctrine:migrations:*" command runs.
  */
 final class SchemaAssetsFilterSubscriber implements EventSubscriberInterface
 {
@@ -30,7 +22,7 @@ final class SchemaAssetsFilterSubscriber implements EventSubscriberInterface
 
     private Connection $connection;
 
-    /** @var (callable(string): bool)|null the filter to put back, while it's lifted */
+    /** @var (callable(string): bool)|null */
     private $previousFilter;
 
     public function __construct(Connection $connection)
