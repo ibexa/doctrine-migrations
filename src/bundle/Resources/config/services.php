@@ -17,6 +17,7 @@ use Ibexa\Bundle\DoctrineMigrations\Comparator\IbexaMigrationComparator;
 use Ibexa\Bundle\DoctrineMigrations\Configuration\EventDispatcherFactory;
 use Ibexa\Bundle\DoctrineMigrations\Configuration\IbexaMigrationConfigurationFactory;
 use Ibexa\Bundle\DoctrineMigrations\EventListener\DryRunListener;
+use Ibexa\Bundle\DoctrineMigrations\EventSubscriber\SchemaAssetsFilterSubscriber;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaOnlyDependencyFactory;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaOnlyMigrationsRepository;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\MigrationRunContext;
@@ -76,4 +77,10 @@ return static function (ContainerConfigurator $containerConfigurator): void {
 
     $services->set(EventDispatcherFactory::class)
         ->args([service(DryRunListener::class)]);
+
+    // A project's "schema_filter" on that connection would otherwise hide the Ibexa tables from the
+    // "ibexa:doctrine:migrations:*" commands.
+    $services->set(SchemaAssetsFilterSubscriber::class)
+        ->args([service('ibexa.persistence.connection')])
+        ->tag('kernel.event_subscriber');
 };
