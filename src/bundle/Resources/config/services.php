@@ -45,15 +45,6 @@ return static function (ContainerConfigurator $containerConfigurator): void {
             null,
         ]);
 
-    // Independent copy of the application's own DependencyFactory — a clone of the application's
-    // Configuration (see IbexaMigrationConfigurationFactory; carries an Ibexa-specific migration
-    // template instead of the application's own, and records executed versions in
-    // "ibexa_doctrine_migration_versions" instead of the application's table) and the same logger,
-    // but always running against "ibexa.persistence.connection" (created by ibexa/core) and using
-    // the Ibexa-only repository above — see IbexaOnlyDependencyFactory. Its metadata storage takes
-    // over the Ibexa versions earlier releases recorded in the application's table — see
-    // MetadataStorageFactory. The abstract_arg placeholders (all standing in for the application's
-    // own DependencyFactory) are replaced by RegisterMigrationsPass.
     $services->set(IbexaOnlyDependencyFactory::SERVICE_ID, DependencyFactory::class)
         ->factory([DependencyFactory::class, 'fromConnection'])
         ->args([

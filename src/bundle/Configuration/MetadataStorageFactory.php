@@ -15,9 +15,7 @@ use Doctrine\Migrations\Metadata\Storage\TableMetadataStorageConfiguration;
 use Ibexa\DoctrineMigrations\Metadata\IbexaMetadataStorage;
 
 /**
- * Builds the Ibexa-only DependencyFactory's metadata storage (registered with its setDefinition()): Doctrine's own
- * table storage, as the DependencyFactory would build it, wrapped in {@see IbexaMetadataStorage} so that it takes over
- * the Ibexa versions earlier releases recorded in the application's table.
+ * Builds the Ibexa-only DependencyFactory's {@see IbexaMetadataStorage}.
  */
 final class MetadataStorageFactory
 {
@@ -39,7 +37,6 @@ final class MetadataStorageFactory
 
         $applicationConfiguration = $this->applicationDependencyFactory->getConfiguration()->getMetadataStorageConfiguration()
             ?? new TableMetadataStorageConfiguration();
-        // an application keeping its versions in a storage of its own never got Ibexa's in a table
         if (!$applicationConfiguration instanceof TableMetadataStorageConfiguration) {
             return $storage;
         }

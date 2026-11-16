@@ -57,7 +57,6 @@ final class DryRunIntegrationTest extends KernelTestCase
                 [NothingToDoMigration::class]
             )
         );
-        // The application's own versions table is never shared with Ibexa's.
         self::assertEquals(
             0,
             $connection->fetchOne(

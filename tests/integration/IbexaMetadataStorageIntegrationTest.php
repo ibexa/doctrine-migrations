@@ -23,10 +23,6 @@ use Ibexa\Tests\Integration\DoctrineMigrations\Fixtures\IntegrationTestMigration
 use Ibexa\Tests\Integration\DoctrineMigrations\Fixtures\NothingToDoMigration;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
-/**
- * Ibexa versions that earlier releases recorded in the application's "doctrine_migration_versions" move into
- * "ibexa_doctrine_migration_versions", instead of their migrations running again.
- */
 final class IbexaMetadataStorageIntegrationTest extends KernelTestCase
 {
     private const APPLICATION_VERSION = 'DoctrineMigrations\Version20260101000000';
@@ -52,8 +48,6 @@ final class IbexaMetadataStorageIntegrationTest extends KernelTestCase
     protected function tearDown(): void
     {
         parent::tearDown();
-        // FrameworkBundle::boot() registers Symfony's ErrorHandler as an exception handler.
-        // Kernel::shutdown() does not restore it, so we do it here to keep PHPUnit happy.
         restore_exception_handler();
     }
 
@@ -64,7 +58,6 @@ final class IbexaMetadataStorageIntegrationTest extends KernelTestCase
 
         $this->ibexaDependencyFactory->getMetadataStorage()->ensureInitialized();
 
-        // Moved with its execution date and time, so its migration never ran again.
         self::assertEquals(
             [['version' => NothingToDoMigration::class, 'executed_at' => self::EXECUTED_AT, 'execution_time' => 1500]],
             $this->fetchVersions($this->ibexaDependencyFactory->getConnection(), 'ibexa_doctrine_migration_versions')
@@ -84,7 +77,6 @@ final class IbexaMetadataStorageIntegrationTest extends KernelTestCase
 
         self::assertTrue($executedMigrations->hasMigration(new Version(NothingToDoMigration::class)));
         self::assertFalse($executedMigrations->hasMigration(new Version(self::APPLICATION_VERSION)));
-        // Only read: nothing moves until the storage is initialized.
         self::assertSame(
             [self::APPLICATION_VERSION, NothingToDoMigration::class],
             array_column($this->fetchApplicationVersions(), 'version')

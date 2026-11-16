@@ -67,7 +67,6 @@ final class IbexaMigrationConfigurationFactoryTest extends TestCase
         self::assertSame('ibexa_doctrine_migration_versions', $ibexaMetadataStorageConfiguration->getTableName());
         self::assertSame('version', $ibexaMetadataStorageConfiguration->getVersionColumnName());
 
-        // The application's own metadata storage configuration is neither replaced nor modified.
         self::assertSame($applicationMetadataStorageConfiguration, $applicationConfiguration->getMetadataStorageConfiguration());
         self::assertSame(
             $applicationTableName,

@@ -11,21 +11,10 @@ namespace Ibexa\Bundle\DoctrineMigrations\Configuration;
 use Doctrine\Migrations\Configuration\Configuration;
 use Doctrine\Migrations\DependencyFactory;
 use Doctrine\Migrations\Metadata\Storage\TableMetadataStorageConfiguration;
-use Ibexa\Contracts\DoctrineMigrations\Migrations\AbstractSqlMigration;
-use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaMigrationInterface;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaOnlyDependencyFactory;
 
 /**
- * Builds the {@see Configuration} used by {@see IbexaOnlyDependencyFactory}:
- * a clone of the application's own Configuration (so migrations directories and transactional/check-database-platform
- * settings all start identical), with its custom migration template overridden to Ibexa's own -- so scaffolded
- * classes already extend {@see AbstractSqlMigration} and implement {@see IbexaMigrationInterface} -- and its executed
- * versions kept in a table of its own, never in the application's "doctrine_migration_versions" (or whatever the
- * application named it), without ever mutating (and therefore leaking any of that into) the application's own
- * Configuration instance.
- *
- * The clone is shallow, so the application's metadata storage configuration is replaced, never modified; Ibexa's
- * table keeps Doctrine's default columns, whatever the application set for its own.
+ * Builds the {@see Configuration} used by {@see IbexaOnlyDependencyFactory} from the application's own.
  */
 final class IbexaMigrationConfigurationFactory
 {

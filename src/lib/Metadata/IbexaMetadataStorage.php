@@ -22,18 +22,7 @@ use Doctrine\Migrations\Version\ExecutionResult;
 use Doctrine\Migrations\Version\Version;
 
 /**
- * The Ibexa-only DependencyFactory's metadata storage: the storage it decorates keeps Ibexa's executed
- * versions in a table of their own, and this one takes over the versions that earlier releases recorded
- * in the application's table instead.
- *
- * While Ibexa's table is empty, every row of the application's table whose version is a registered
- * Ibexa migration counts as executed, and {@see ensureInitialized()} moves it into Ibexa's table, with
- * its execution date and time, so none of those migrations runs again. Before that, e.g. for
- * "ibexa:doctrine:migrations:status", which never initializes the storage, the rows are only read.
- *
- * The application's table is read with a plain query rather than through the schema manager, so no
- * schema assets filter can hide it. It may sit on another connection than Ibexa's, so a row is
- * deleted from it only after it's been inserted into Ibexa's.
+ * Keeps Ibexa's executed versions, taking over the ones earlier releases recorded in the application's table.
  */
 final class IbexaMetadataStorage implements MetadataStorage
 {
@@ -47,7 +36,7 @@ final class IbexaMetadataStorage implements MetadataStorage
 
     private TableMetadataStorageConfiguration $applicationConfiguration;
 
-    /** @var array<string, ExecutedMigration>|null Ibexa's versions still in the application's table, once looked up */
+    /** @var array<string, ExecutedMigration>|null */
     private ?array $applicationVersions = null;
 
     public function __construct(
@@ -123,8 +112,6 @@ final class IbexaMetadataStorage implements MetadataStorage
     }
 
     /**
-     * Reads the application's table the way Doctrine's TableMetadataStorage does.
-     *
      * @return array<string, ExecutedMigration>
      */
     private function readApplicationVersions(): array
