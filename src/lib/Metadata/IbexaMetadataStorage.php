@@ -37,7 +37,7 @@ final class IbexaMetadataStorage implements MetadataStorage
     private TableMetadataStorageConfiguration $applicationConfiguration;
 
     /** @var array<string, ExecutedMigration>|null */
-    private ?array $applicationVersions = null;
+    private ?array $ibexaMigrationsFromProjectStorage = null;
 
     public function __construct(
         MetadataStorage $storage,
@@ -56,17 +56,17 @@ final class IbexaMetadataStorage implements MetadataStorage
     public function ensureInitialized(): void
     {
         $this->storage->ensureInitialized();
-        $this->moveApplicationVersions();
+        $this->moveIbexaMigrationsIntoNewStorage();
     }
 
     public function getExecutedMigrations(): ExecutedMigrationsList
     {
-        $applicationVersions = $this->getApplicationVersions();
-        if ($applicationVersions === []) {
+        $migrations = $this->getIbexaMigrationsFromProjectStorage();
+        if ($migrations === []) {
             return $this->storage->getExecutedMigrations();
         }
 
-        return new ExecutedMigrationsList($applicationVersions);
+        return new ExecutedMigrationsList($migrations);
     }
 
     public function complete(ExecutionResult $result): void
@@ -79,10 +79,10 @@ final class IbexaMetadataStorage implements MetadataStorage
         $this->storage->reset();
     }
 
-    private function moveApplicationVersions(): void
+    private function moveIbexaMigrationsIntoNewStorage(): void
     {
-        $applicationVersions = $this->getApplicationVersions();
-        foreach ($applicationVersions as $migration) {
+        $migrations = $this->getIbexaMigrationsFromProjectStorage();
+        foreach ($migrations as $migration) {
             $result = new ExecutionResult($migration->getVersion(), Direction::UP, $migration->getExecutedAt());
             $executionTime = $migration->getExecutionTime();
             if ($executionTime !== null) {
@@ -92,33 +92,33 @@ final class IbexaMetadataStorage implements MetadataStorage
             $this->storage->complete($result);
         }
 
-        foreach (array_keys($applicationVersions) as $version) {
+        foreach (array_keys($migrations) as $version) {
             $this->applicationConnection->delete($this->applicationConfiguration->getTableName(), [
                 $this->applicationConfiguration->getVersionColumnName() => $version,
             ]);
         }
 
-        $this->applicationVersions = [];
+        $this->ibexaMigrationsFromProjectStorage = [];
     }
 
     /**
      * @return array<string, ExecutedMigration>
      */
-    private function getApplicationVersions(): array
+    private function getIbexaMigrationsFromProjectStorage(): array
     {
-        if ($this->applicationVersions === null) {
-            $this->applicationVersions = count($this->storage->getExecutedMigrations()) === 0
-                ? $this->readApplicationVersions()
+        if ($this->ibexaMigrationsFromProjectStorage === null) {
+            $this->ibexaMigrationsFromProjectStorage = count($this->storage->getExecutedMigrations()) === 0
+                ? $this->readIbexaMigrationsFromProjectStorage()
                 : [];
         }
 
-        return $this->applicationVersions;
+        return $this->ibexaMigrationsFromProjectStorage;
     }
 
     /**
      * @return array<string, ExecutedMigration>
      */
-    private function readApplicationVersions(): array
+    private function readIbexaMigrationsFromProjectStorage(): array
     {
         $configuration = $this->applicationConfiguration;
         try {
