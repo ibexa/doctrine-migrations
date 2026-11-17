@@ -56,25 +56,7 @@ final class IbexaMetadataStorage implements MetadataStorage
     public function ensureInitialized(): void
     {
         $this->storage->ensureInitialized();
-
-        $applicationVersions = $this->getApplicationVersions();
-        foreach ($applicationVersions as $migration) {
-            $result = new ExecutionResult($migration->getVersion(), Direction::UP, $migration->getExecutedAt());
-            $executionTime = $migration->getExecutionTime();
-            if ($executionTime !== null) {
-                $result->setTime($executionTime);
-            }
-
-            $this->storage->complete($result);
-        }
-
-        foreach (array_keys($applicationVersions) as $version) {
-            $this->applicationConnection->delete($this->applicationConfiguration->getTableName(), [
-                $this->applicationConfiguration->getVersionColumnName() => $version,
-            ]);
-        }
-
-        $this->applicationVersions = [];
+        $this->moveApplicationVersions();
     }
 
     public function getExecutedMigrations(): ExecutedMigrationsList
@@ -95,6 +77,28 @@ final class IbexaMetadataStorage implements MetadataStorage
     public function reset(): void
     {
         $this->storage->reset();
+    }
+
+    private function moveApplicationVersions(): void
+    {
+        $applicationVersions = $this->getApplicationVersions();
+        foreach ($applicationVersions as $migration) {
+            $result = new ExecutionResult($migration->getVersion(), Direction::UP, $migration->getExecutedAt());
+            $executionTime = $migration->getExecutionTime();
+            if ($executionTime !== null) {
+                $result->setTime($executionTime);
+            }
+
+            $this->storage->complete($result);
+        }
+
+        foreach (array_keys($applicationVersions) as $version) {
+            $this->applicationConnection->delete($this->applicationConfiguration->getTableName(), [
+                $this->applicationConfiguration->getVersionColumnName() => $version,
+            ]);
+        }
+
+        $this->applicationVersions = [];
     }
 
     /**
