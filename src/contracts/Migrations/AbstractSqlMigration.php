@@ -21,9 +21,12 @@ use Psr\Log\LoggerInterface;
  * Base class for Ibexa migrations that build their SQL per database platform, providing
  * named platform-check helpers ({@see isMySQL()}, {@see isMariaDB()}, {@see isPostgreSQL()},
  * {@see isSqlite()}) instead of raw `$this->platform instanceof ...` checks, and a way to load
- * a platform's SQL from an external file ({@see addSqlFile()}) instead of inlining it in PHP.
+ * a platform's SQL from an external file ({@see addSqlFile()}, {@see addSingleSqlStatementFile()}) instead of
+ * inlining it in PHP.
  *
  * @internal for internal use by Ibexa 1st party packages
+ *
+ * @phpstan-import-type WrapperParameterTypeArray from Connection
  */
 abstract class AbstractSqlMigration extends AbstractMigration
 {
@@ -131,16 +134,7 @@ abstract class AbstractSqlMigration extends AbstractMigration
         string $file,
         string $delimiter = self::DEFAULT_SQL_STATEMENT_DELIMITER
     ): void {
-        if (!is_file($file) || !is_readable($file)) {
-            throw new \RuntimeException(sprintf('Unable to read SQL file "%s".', $file));
-        }
-
-        $contents = file_get_contents($file);
-        if ($contents === false) {
-            throw new \RuntimeException(sprintf('Unable to read SQL file "%s".', $file));
-        }
-
-        foreach (explode($delimiter, $contents) as $statement) {
+        foreach (explode($delimiter, $this->readSqlFile($file)) as $statement) {
             $statement = trim($statement);
             if ($statement === '') {
                 continue;
@@ -148,6 +142,25 @@ abstract class AbstractSqlMigration extends AbstractMigration
 
             $this->addSql($this->applyConfiguredTableOptions($statement));
         }
+    }
+
+    /**
+     * Queues the single SQL statement of a file for execution via {@see addSql()}, with the given parameters.
+     *
+     * @param list<mixed>|array<string, mixed> $params
+     * @param WrapperParameterTypeArray $types
+     */
+    final protected function addSingleSqlStatementFile(
+        string $file,
+        array $params = [],
+        array $types = []
+    ): void {
+        $statement = trim($this->readSqlFile($file));
+        if ($statement === '' || str_contains($statement, self::DEFAULT_SQL_STATEMENT_DELIMITER)) {
+            throw new \RuntimeException(sprintf('SQL file "%s" must hold exactly one statement.', $file));
+        }
+
+        $this->addSql($this->applyConfiguredTableOptions($statement), $params, $types);
     }
 
     /**
@@ -196,6 +209,20 @@ abstract class AbstractSqlMigration extends AbstractMigration
             : sprintf('DEFAULT CHARACTER SET %s COLLATE `%s`', $charset, $collation ?? $charset . '_unicode_ci');
 
         return str_replace(self::MYSQL_DEFAULT_TABLE_OPTIONS, $tableOptions, $statement);
+    }
+
+    private function readSqlFile(string $file): string
+    {
+        if (!is_file($file) || !is_readable($file)) {
+            throw new \RuntimeException(sprintf('Unable to read SQL file "%s".', $file));
+        }
+
+        $contents = file_get_contents($file);
+        if ($contents === false) {
+            throw new \RuntimeException(sprintf('Unable to read SQL file "%s".', $file));
+        }
+
+        return $contents;
     }
 
     private function resolvePlatform(): ?SqlPlatform

@@ -9,6 +9,7 @@ declare(strict_types=1);
 namespace Ibexa\Tests\Bundle\DoctrineMigrations\Migrations;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Doctrine\DBAL\Platforms\AbstractPlatform;
 use Doctrine\DBAL\Platforms\MariaDBPlatform;
 use Doctrine\DBAL\Platforms\MySQLPlatform;
@@ -221,6 +222,66 @@ final class AbstractSqlMigrationTest extends TestCase
         $this->expectException(\RuntimeException::class);
 
         $migration->addSqlFilePublic(__DIR__ . '/../Fixtures/sql/does-not-exist.sql');
+    }
+
+    public function testAddSingleSqlStatementFileQueuesTheStatementWithItsParameters(): void
+    {
+        $migration = $this->buildMigration(self::createStub(MySQLPlatform::class));
+
+        $migration->addSingleSqlStatementFilePublic(
+            __DIR__ . '/../Fixtures/sql/single-statement.sql',
+            ['from' => 1, 'to' => 1000],
+            ['from' => ParameterType::INTEGER, 'to' => ParameterType::INTEGER],
+        );
+
+        $queries = $migration->getSql();
+        self::assertCount(1, $queries);
+        self::assertSame("UPDATE one\nSET name = 'one'\nWHERE id BETWEEN :from AND :to;", $queries[0]->getStatement());
+        self::assertSame(['from' => 1, 'to' => 1000], $queries[0]->getParameters());
+        self::assertSame(['from' => ParameterType::INTEGER, 'to' => ParameterType::INTEGER], $queries[0]->getTypes());
+    }
+
+    /**
+     * @param class-string<AbstractPlatform> $platformClass
+     * @param array<string, scalar|null> $tableOptions
+     */
+    #[DataProvider('provideTableOptions')]
+    public function testAddSingleSqlStatementFileAppliesConfiguredTableOptions(
+        string $platformClass,
+        array $tableOptions,
+        string $expectedTableOptions
+    ): void {
+        $migration = $this->buildMigration(self::createStub($platformClass), new MigrationRunContext($tableOptions));
+
+        $migration->addSingleSqlStatementFilePublic(__DIR__ . '/../Fixtures/sql/single-create-table.sql');
+
+        self::assertSame(
+            ["CREATE TABLE one (\n    id INT NOT NULL,\n    PRIMARY KEY(id)\n) $expectedTableOptions ENGINE = InnoDB;"],
+            $this->getQueuedStatements($migration),
+        );
+    }
+
+    #[DataProvider('provideFilesWithoutASingleStatement')]
+    public function testAddSingleSqlStatementFileThrowsWithoutASingleStatement(
+        string $file,
+        string $expectedMessage
+    ): void {
+        $migration = $this->buildMigration(self::createStub(MySQLPlatform::class));
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage($expectedMessage);
+
+        $migration->addSingleSqlStatementFilePublic(__DIR__ . '/../Fixtures/sql/' . $file);
+    }
+
+    /**
+     * @return iterable<string, array{string, string}>
+     */
+    public static function provideFilesWithoutASingleStatement(): iterable
+    {
+        yield 'missing file' => ['does-not-exist.sql', 'Unable to read SQL file'];
+        yield 'empty file' => ['empty.sql', 'must hold exactly one statement'];
+        yield 'separated statements' => ['statements.sql', 'must hold exactly one statement'];
     }
 
     public function testAbortIfUnsupportedPlatformDoesNotThrowWhenPlatformIsSupported(): void
