@@ -9,6 +9,7 @@ declare(strict_types=1);
 namespace Ibexa\Bundle\DoctrineMigrations\EventListener;
 
 use Doctrine\Migrations\Event\MigrationsEventArgs;
+use Doctrine\Migrations\Version\Direction;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\AbstractSqlMigration;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\MigrationRunContext;
 use Ibexa\Contracts\DoctrineSchema\Database\DatabasePlatformName;
@@ -16,7 +17,7 @@ use Ibexa\Contracts\DoctrineSchema\Database\DatabasePlatformResolver;
 use RuntimeException;
 
 /**
- * Stops a migrate on MySQL or MariaDB before any migration runs when one of Ibexa's tables already in the database
+ * Stops an up migrate on MySQL or MariaDB before any migration runs when one of Ibexa's tables already in the database
  * doesn't use the collation new tables would get. A foreign key between string columns of different collations fails
  * there, and halfway through a run, since MySQL and MariaDB can't roll schema changes back: a new table referencing an
  * existing one (an oauth2 consent its user's login, a shopping list entry its product's code) would stop the run.
@@ -55,6 +56,10 @@ final class TableCollationCheckListener
 
     public function onMigrationsMigrating(MigrationsEventArgs $args): void
     {
+        if ($args->getPlan()->getDirection() === Direction::DOWN) {
+            return;
+        }
+
         $connection = $args->getConnection();
         // MariaDB is resolved as MySQL too
         if (DatabasePlatformResolver::resolveName($connection->getDatabasePlatform()) !== DatabasePlatformName::MYSQL) {

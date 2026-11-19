@@ -125,6 +125,15 @@ final class TableCollationCheckListenerTest extends TestCase
         ))->onMigrationsMigrating($this->buildEventArgs($this->buildMysqlConnection($tables)));
     }
 
+    public function testChecksOnlyUpRuns(): void
+    {
+        $connection = $this->createMock(Connection::class);
+        $connection->expects(self::never())->method('fetchAllKeyValue');
+
+        (new TableCollationCheckListener(new MigrationRunContext(['collate' => 'utf8mb4_general_ci'])))
+            ->onMigrationsMigrating($this->buildEventArgs($connection, Direction::DOWN));
+    }
+
     public function testChecksOnlyMysqlAndMariadb(): void
     {
         $connection = $this->createMock(Connection::class);
@@ -163,9 +172,11 @@ final class TableCollationCheckListenerTest extends TestCase
             ->onMigrationsMigrating($this->buildEventArgs($connection));
     }
 
-    private function buildEventArgs(Connection $connection): MigrationsEventArgs
-    {
-        return new MigrationsEventArgs($connection, new MigrationPlanList([], Direction::UP), new MigratorConfiguration());
+    private function buildEventArgs(
+        Connection $connection,
+        string $direction = Direction::UP
+    ): MigrationsEventArgs {
+        return new MigrationsEventArgs($connection, new MigrationPlanList([], $direction), new MigratorConfiguration());
     }
 
     /**
