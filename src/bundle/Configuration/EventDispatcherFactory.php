@@ -14,22 +14,28 @@ use Doctrine\Migrations\DependencyFactory;
 use Doctrine\Migrations\EventDispatcher;
 use Doctrine\Migrations\Events;
 use Ibexa\Bundle\DoctrineMigrations\EventListener\DryRunListener;
+use Ibexa\Bundle\DoctrineMigrations\EventListener\TableCollationCheckListener;
 
 /**
  * Builds the Ibexa-only DependencyFactory's event dispatcher (registered with its setDefinition()), with
- * {@see DryRunListener} on it.
+ * {@see DryRunListener} and, unless it's disabled, {@see TableCollationCheckListener} on it.
  *
  * Doctrine's own dispatcher goes through the connection's event manager, where a "doctrine.event_listener" tag would
  * reach. DBAL 4 connections have none, and a DependencyFactory made from a connection then gets an empty manager of its
- * own, which no tag reaches; so the listener is added here instead.
+ * own, which no tag reaches; so the listeners are added here instead.
  */
 final class EventDispatcherFactory
 {
     private DryRunListener $dryRunListener;
 
-    public function __construct(DryRunListener $dryRunListener)
-    {
+    private ?TableCollationCheckListener $tableCollationCheckListener;
+
+    public function __construct(
+        DryRunListener $dryRunListener,
+        ?TableCollationCheckListener $tableCollationCheckListener
+    ) {
         $this->dryRunListener = $dryRunListener;
+        $this->tableCollationCheckListener = $tableCollationCheckListener;
     }
 
     public function create(DependencyFactory $dependencyFactory): EventDispatcher
@@ -41,6 +47,9 @@ final class EventDispatcherFactory
             ? $connection->getEventManager()
             : new EventManager();
         $eventManager->addEventListener([Events::onMigrationsVersionExecuting], $this->dryRunListener);
+        if ($this->tableCollationCheckListener !== null) {
+            $eventManager->addEventListener([Events::onMigrationsMigrating], $this->tableCollationCheckListener);
+        }
 
         return new EventDispatcher($connection, $eventManager);
     }
