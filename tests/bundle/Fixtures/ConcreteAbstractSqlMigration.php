@@ -8,14 +8,10 @@ declare(strict_types=1);
 
 namespace Ibexa\Tests\Bundle\DoctrineMigrations\Fixtures;
 
-use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Schema\Schema;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\AbstractSqlMigration;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\SqlPlatform;
 
-/**
- * @phpstan-import-type WrapperParameterTypeArray from Connection
- */
 final class ConcreteAbstractSqlMigration extends AbstractSqlMigration
 {
     public function getDescription(): string
@@ -60,16 +56,9 @@ final class ConcreteAbstractSqlMigration extends AbstractSqlMigration
         $this->addSqlFile($file, $delimiter);
     }
 
-    /**
-     * @param list<mixed>|array<string, mixed> $params
-     * @param WrapperParameterTypeArray $types
-     */
-    public function addSingleSqlStatementFilePublic(
-        string $file,
-        array $params = [],
-        array $types = []
-    ): void {
-        $this->addSingleSqlStatementFile($file, $params, $types);
+    public function readSqlFilePublic(string $file): string
+    {
+        return $this->readSqlFile($file);
     }
 
     public function abortIfUnsupportedPlatformPublic(SqlPlatform ...$supportedPlatforms): void
