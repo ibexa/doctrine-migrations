@@ -51,10 +51,11 @@ final class IbexaMetadataStorageIntegrationTest extends KernelTestCase
         restore_exception_handler();
     }
 
-    public function testMovesIbexaVersionsOutOfTheApplicationTable(): void
+    public function testMovesIbexaVersionsOutOfTheProjectStorage(): void
     {
-        $this->recordInApplicationTable(NothingToDoMigration::class);
-        $this->recordInApplicationTable(self::APPLICATION_VERSION);
+        $this->recordInProjectStorage(NothingToDoMigration::class);
+        $this->recordInProjectStorage(self::APPLICATION_VERSION);
+        $this->recordWithApplicationDependencyFactory(self::APPLICATION_VERSION);
 
         $this->ibexaDependencyFactory->getMetadataStorage()->ensureInitialized();
 
@@ -62,16 +63,14 @@ final class IbexaMetadataStorageIntegrationTest extends KernelTestCase
             [['version' => NothingToDoMigration::class, 'executed_at' => self::EXECUTED_AT, 'execution_time' => 1500]],
             $this->fetchVersions($this->ibexaDependencyFactory->getConnection(), 'ibexa_doctrine_migration_versions')
         );
-        self::assertSame(
-            [self::APPLICATION_VERSION],
-            array_column($this->fetchApplicationVersions(), 'version')
-        );
+        self::assertSame([self::APPLICATION_VERSION], array_column($this->fetchProjectStorageVersions(), 'version'));
+        self::assertSame([self::APPLICATION_VERSION], array_column($this->fetchApplicationVersions(), 'version'));
     }
 
-    public function testCountsIbexaVersionsStillInTheApplicationTableAsExecuted(): void
+    public function testCountsIbexaVersionsStillInTheProjectStorageAsExecuted(): void
     {
-        $this->recordInApplicationTable(NothingToDoMigration::class);
-        $this->recordInApplicationTable(self::APPLICATION_VERSION);
+        $this->recordInProjectStorage(NothingToDoMigration::class);
+        $this->recordInProjectStorage(self::APPLICATION_VERSION);
 
         $executedMigrations = $this->ibexaDependencyFactory->getMetadataStorage()->getExecutedMigrations();
 
@@ -79,11 +78,11 @@ final class IbexaMetadataStorageIntegrationTest extends KernelTestCase
         self::assertFalse($executedMigrations->hasMigration(new Version(self::APPLICATION_VERSION)));
         self::assertSame(
             [self::APPLICATION_VERSION, NothingToDoMigration::class],
-            array_column($this->fetchApplicationVersions(), 'version')
+            array_column($this->fetchProjectStorageVersions(), 'version')
         );
     }
 
-    public function testLeavesTheApplicationTableAloneOnceIbexaRecordedVersionsOfItsOwn(): void
+    public function testLeavesTheProjectStorageAloneOnceIbexaRecordedVersionsOfItsOwn(): void
     {
         $ibexaConfiguration = new TableMetadataStorageConfiguration();
         $ibexaConfiguration->setTableName('ibexa_doctrine_migration_versions');
@@ -91,16 +90,31 @@ final class IbexaMetadataStorageIntegrationTest extends KernelTestCase
             new TableMetadataStorage($this->ibexaDependencyFactory->getConnection(), new AlphabeticalComparator(), $ibexaConfiguration),
             IntegrationTestMigration::class
         );
-        $this->recordInApplicationTable(NothingToDoMigration::class);
+        $this->recordInProjectStorage(NothingToDoMigration::class);
 
         $storage = $this->ibexaDependencyFactory->getMetadataStorage();
         $storage->ensureInitialized();
 
         self::assertFalse($storage->getExecutedMigrations()->hasMigration(new Version(NothingToDoMigration::class)));
-        self::assertSame([NothingToDoMigration::class], array_column($this->fetchApplicationVersions(), 'version'));
+        self::assertSame([NothingToDoMigration::class], array_column($this->fetchProjectStorageVersions(), 'version'));
     }
 
-    private function recordInApplicationTable(string $version): void
+    /**
+     * Records a version in the project's table on the Ibexa connection.
+     */
+    private function recordInProjectStorage(string $version): void
+    {
+        $this->record(
+            new TableMetadataStorage(
+                $this->ibexaDependencyFactory->getConnection(),
+                new AlphabeticalComparator(),
+                $this->applicationDependencyFactory->getConfiguration()->getMetadataStorageConfiguration()
+            ),
+            $version
+        );
+    }
+
+    private function recordWithApplicationDependencyFactory(string $version): void
     {
         $this->record($this->applicationDependencyFactory->getMetadataStorage(), $version);
     }
@@ -114,6 +128,14 @@ final class IbexaMetadataStorageIntegrationTest extends KernelTestCase
         $result = new ExecutionResult(new Version($version), Direction::UP, new DateTimeImmutable(self::EXECUTED_AT));
         $result->setTime(1.5);
         $storage->complete($result);
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function fetchProjectStorageVersions(): array
+    {
+        return $this->fetchVersions($this->ibexaDependencyFactory->getConnection(), 'doctrine_migration_versions');
     }
 
     /**

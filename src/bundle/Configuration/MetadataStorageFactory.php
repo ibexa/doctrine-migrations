@@ -35,9 +35,9 @@ final class MetadataStorageFactory
             $dependencyFactory->getMigrationRepository()
         );
 
-        $applicationConfiguration = $this->applicationDependencyFactory->getConfiguration()->getMetadataStorageConfiguration()
+        $projectStorageConfiguration = $this->applicationDependencyFactory->getConfiguration()->getMetadataStorageConfiguration()
             ?? new TableMetadataStorageConfiguration();
-        if (!$applicationConfiguration instanceof TableMetadataStorageConfiguration) {
+        if (!$projectStorageConfiguration instanceof TableMetadataStorageConfiguration) {
             return $storage;
         }
 
@@ -45,8 +45,8 @@ final class MetadataStorageFactory
             $storage,
             $dependencyFactory->getMigrationRepository(),
             $dependencyFactory->getVersionComparator(),
-            $this->applicationDependencyFactory->getConnection(),
-            $applicationConfiguration
+            $dependencyFactory->getConnection(),
+            $projectStorageConfiguration
         );
     }
 }

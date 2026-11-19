@@ -22,7 +22,7 @@ use Doctrine\Migrations\Version\ExecutionResult;
 use Doctrine\Migrations\Version\Version;
 
 /**
- * Keeps Ibexa's executed versions, taking over the ones earlier releases recorded in the application's table.
+ * Keeps Ibexa's executed versions, taking over the ones earlier releases recorded in the project's table.
  */
 final class IbexaMetadataStorage implements MetadataStorage
 {
@@ -32,9 +32,9 @@ final class IbexaMetadataStorage implements MetadataStorage
 
     private Comparator $comparator;
 
-    private Connection $applicationConnection;
+    private Connection $connection;
 
-    private TableMetadataStorageConfiguration $applicationConfiguration;
+    private TableMetadataStorageConfiguration $projectStorageConfiguration;
 
     /** @var array<string, ExecutedMigration>|null */
     private ?array $ibexaMigrationsFromProjectStorage = null;
@@ -43,14 +43,14 @@ final class IbexaMetadataStorage implements MetadataStorage
         MetadataStorage $storage,
         MigrationsRepository $migrationRepository,
         Comparator $comparator,
-        Connection $applicationConnection,
-        TableMetadataStorageConfiguration $applicationConfiguration
+        Connection $connection,
+        TableMetadataStorageConfiguration $projectStorageConfiguration
     ) {
         $this->storage = $storage;
         $this->migrationRepository = $migrationRepository;
         $this->comparator = $comparator;
-        $this->applicationConnection = $applicationConnection;
-        $this->applicationConfiguration = $applicationConfiguration;
+        $this->connection = $connection;
+        $this->projectStorageConfiguration = $projectStorageConfiguration;
     }
 
     public function ensureInitialized(): void
@@ -93,8 +93,8 @@ final class IbexaMetadataStorage implements MetadataStorage
         }
 
         foreach (array_keys($migrations) as $version) {
-            $this->applicationConnection->delete($this->applicationConfiguration->getTableName(), [
-                $this->applicationConfiguration->getVersionColumnName() => $version,
+            $this->connection->delete($this->projectStorageConfiguration->getTableName(), [
+                $this->projectStorageConfiguration->getVersionColumnName() => $version,
             ]);
         }
 
@@ -120,16 +120,16 @@ final class IbexaMetadataStorage implements MetadataStorage
      */
     private function readIbexaMigrationsFromProjectStorage(): array
     {
-        $configuration = $this->applicationConfiguration;
+        $configuration = $this->projectStorageConfiguration;
         try {
-            $rows = $this->applicationConnection->fetchAllAssociative(
+            $rows = $this->connection->fetchAllAssociative(
                 sprintf('SELECT * FROM %s', $configuration->getTableName())
             );
         } catch (TableNotFoundException $e) {
             return [];
         }
 
-        $dateTimeFormat = $this->applicationConnection->getDatabasePlatform()->getDateTimeFormatString();
+        $dateTimeFormat = $this->connection->getDatabasePlatform()->getDateTimeFormatString();
         $versions = [];
         foreach ($rows as $row) {
             $row = array_change_key_case($row, CASE_LOWER);
