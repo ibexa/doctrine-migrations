@@ -55,6 +55,11 @@ final class ConcreteAbstractSqlMigration extends AbstractSqlMigration
         $this->addSqlFile($file, $delimiter);
     }
 
+    public function readSqlFilePublic(string $file): string
+    {
+        return $this->readSqlFile($file);
+    }
+
     public function abortIfUnsupportedPlatformPublic(string ...$supportedPlatforms): void
     {
         $this->abortIfUnsupportedPlatform(...$supportedPlatforms);
