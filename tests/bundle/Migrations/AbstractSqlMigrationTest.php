@@ -235,6 +235,48 @@ final class AbstractSqlMigrationTest extends TestCase
         $migration->addSqlFilePublic(__DIR__ . '/../Fixtures/sql/does-not-exist.sql');
     }
 
+    public function testReadSqlFileReturnsTheFileContents(): void
+    {
+        $migration = $this->buildMigration($this->createMock(self::getMysqlPlatformClass()));
+
+        self::assertSame(
+            "UPDATE one\nSET name = 'one'\nWHERE id BETWEEN :from AND :to;\n",
+            $migration->readSqlFilePublic(__DIR__ . '/../Fixtures/sql/parameterized-statement.sql'),
+        );
+        self::assertSame([], $this->getQueuedStatements($migration));
+    }
+
+    /**
+     * @dataProvider provideTableOptions
+     *
+     * @param class-string<AbstractPlatform> $platformClass
+     * @param array<string, scalar|null> $tableOptions
+     */
+    public function testReadSqlFileAppliesConfiguredTableOptions(
+        string $platformClass,
+        array $tableOptions,
+        string $expectedTableOptions
+    ): void {
+        $migration = $this->buildMigration($this->createMock($platformClass), new MigrationRunContext($tableOptions));
+
+        self::assertSame(
+            "CREATE TABLE one (\n    id INT NOT NULL,\n    PRIMARY KEY(id)\n) $expectedTableOptions ENGINE = InnoDB;\n"
+                . "-- ibexa:sql-statement-separator\n"
+                . "ALTER TABLE one ADD name VARCHAR(190) NOT NULL;\n",
+            $migration->readSqlFilePublic(__DIR__ . '/../Fixtures/sql/create-table.sql'),
+        );
+    }
+
+    public function testReadSqlFileThrowsWhenFileDoesNotExist(): void
+    {
+        $migration = $this->buildMigration($this->createMock(self::getMysqlPlatformClass()));
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Unable to read SQL file');
+
+        $migration->readSqlFilePublic(__DIR__ . '/../Fixtures/sql/does-not-exist.sql');
+    }
+
     public function testAbortIfUnsupportedPlatformDoesNotThrowWhenPlatformIsSupported(): void
     {
         $migration = $this->buildMigration($this->createMock(self::getPostgresqlPlatformClass()));
