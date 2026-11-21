@@ -234,6 +234,26 @@ final class AbstractSqlMigrationTest extends TestCase
         self::assertSame([], $this->getQueuedStatements($migration));
     }
 
+    /**
+     * @param class-string<AbstractPlatform> $platformClass
+     * @param array<string, scalar|null> $tableOptions
+     */
+    #[DataProvider('provideTableOptions')]
+    public function testReadSqlFileAppliesConfiguredTableOptions(
+        string $platformClass,
+        array $tableOptions,
+        string $expectedTableOptions
+    ): void {
+        $migration = $this->buildMigration(self::createStub($platformClass), new MigrationRunContext($tableOptions));
+
+        self::assertSame(
+            "CREATE TABLE one (\n    id INT NOT NULL,\n    PRIMARY KEY(id)\n) $expectedTableOptions ENGINE = InnoDB;\n"
+                . "-- ibexa:sql-statement-separator\n"
+                . "ALTER TABLE one ADD name VARCHAR(190) NOT NULL;\n",
+            $migration->readSqlFilePublic(__DIR__ . '/../Fixtures/sql/create-table.sql'),
+        );
+    }
+
     public function testReadSqlFileThrowsWhenFileDoesNotExist(): void
     {
         $migration = $this->buildMigration(self::createStub(MySQLPlatform::class));

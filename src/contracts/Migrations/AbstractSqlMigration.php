@@ -137,10 +137,13 @@ abstract class AbstractSqlMigration extends AbstractMigration
                 continue;
             }
 
-            $this->addSql($this->applyConfiguredTableOptions($statement));
+            $this->addSql($statement);
         }
     }
 
+    /**
+     * Returns the contents of a SQL file, with the configured table options applied.
+     */
     final protected function readSqlFile(string $file): string
     {
         if (!is_file($file) || !is_readable($file)) {
@@ -152,7 +155,7 @@ abstract class AbstractSqlMigration extends AbstractMigration
             throw new \RuntimeException(sprintf('Unable to read SQL file "%s".', $file));
         }
 
-        return $contents;
+        return $this->applyConfiguredTableOptions($contents);
     }
 
     /**
@@ -187,20 +190,20 @@ abstract class AbstractSqlMigration extends AbstractMigration
      * it, and MariaDB's "uca1400_*" names don't start with one. With neither configured the file's options stay,
      * instead of DBAL's utf8 ones.
      */
-    private function applyConfiguredTableOptions(string $statement): string
+    private function applyConfiguredTableOptions(string $sql): string
     {
         $charset = $this->migrationRunContext->getTableCharset();
         $collation = $this->migrationRunContext->getTableCollation();
 
         if ((!$this->isMySQL() && !$this->isMariaDB()) || ($charset === null && $collation === null)) {
-            return $statement;
+            return $sql;
         }
 
         $tableOptions = $charset === null
             ? sprintf('COLLATE `%s`', $collation)
             : sprintf('DEFAULT CHARACTER SET %s COLLATE `%s`', $charset, $collation ?? $charset . '_unicode_ci');
 
-        return str_replace(self::MYSQL_DEFAULT_TABLE_OPTIONS, $tableOptions, $statement);
+        return str_replace(self::MYSQL_DEFAULT_TABLE_OPTIONS, $tableOptions, $sql);
     }
 
     private function resolvePlatform(): ?SqlPlatform
