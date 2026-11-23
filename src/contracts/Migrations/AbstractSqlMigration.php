@@ -21,7 +21,7 @@ use Psr\Log\LoggerInterface;
  * Base class for Ibexa migrations that build their SQL per database platform, providing
  * named platform-check helpers ({@see isMySQL()}, {@see isMariaDB()}, {@see isPostgreSQL()},
  * {@see isSqlite()}) instead of raw `$this->platform instanceof ...` checks, and a way to load
- * a platform's SQL from an external file ({@see addSqlFile()}) instead of inlining it in PHP.
+ * a platform's SQL from an external file ({@see addSqlFile()}, {@see readSqlFile()}) instead of inlining it in PHP.
  *
  * @internal for internal use by Ibexa 1st party packages
  */
@@ -131,6 +131,21 @@ abstract class AbstractSqlMigration extends AbstractMigration
         string $file,
         string $delimiter = self::DEFAULT_SQL_STATEMENT_DELIMITER
     ): void {
+        foreach (explode($delimiter, $this->readSqlFile($file)) as $statement) {
+            $statement = trim($statement);
+            if ($statement === '') {
+                continue;
+            }
+
+            $this->addSql($statement);
+        }
+    }
+
+    /**
+     * Returns the contents of a SQL file, with the configured table options applied.
+     */
+    final protected function readSqlFile(string $file): string
+    {
         if (!is_file($file) || !is_readable($file)) {
             throw new \RuntimeException(sprintf('Unable to read SQL file "%s".', $file));
         }
@@ -140,14 +155,7 @@ abstract class AbstractSqlMigration extends AbstractMigration
             throw new \RuntimeException(sprintf('Unable to read SQL file "%s".', $file));
         }
 
-        foreach (explode($delimiter, $contents) as $statement) {
-            $statement = trim($statement);
-            if ($statement === '') {
-                continue;
-            }
-
-            $this->addSql($this->applyConfiguredTableOptions($statement));
-        }
+        return $this->applyConfiguredTableOptions($contents);
     }
 
     /**
@@ -182,20 +190,20 @@ abstract class AbstractSqlMigration extends AbstractMigration
      * it, and MariaDB's "uca1400_*" names don't start with one. With neither configured the file's options stay,
      * instead of DBAL's utf8 ones.
      */
-    private function applyConfiguredTableOptions(string $statement): string
+    private function applyConfiguredTableOptions(string $sql): string
     {
         $charset = $this->migrationRunContext->getTableCharset();
         $collation = $this->migrationRunContext->getTableCollation();
 
         if ((!$this->isMySQL() && !$this->isMariaDB()) || ($charset === null && $collation === null)) {
-            return $statement;
+            return $sql;
         }
 
         $tableOptions = $charset === null
             ? sprintf('COLLATE `%s`', $collation)
             : sprintf('DEFAULT CHARACTER SET %s COLLATE `%s`', $charset, $collation ?? $charset . '_unicode_ci');
 
-        return str_replace(self::MYSQL_DEFAULT_TABLE_OPTIONS, $tableOptions, $statement);
+        return str_replace(self::MYSQL_DEFAULT_TABLE_OPTIONS, $tableOptions, $sql);
     }
 
     private function resolvePlatform(): ?SqlPlatform
