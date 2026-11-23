@@ -10,13 +10,11 @@ namespace Ibexa\Bundle\DoctrineMigrations\DependencyInjection\Compiler;
 
 use Doctrine\DBAL\Connection;
 use Ibexa\Bundle\DoctrineMigrations\Configuration\IbexaMigrationConfigurationFactory;
-use Ibexa\Bundle\RepositoryInstaller\Migration\TaggedMigrationsRunner;
-use Ibexa\Contracts\DoctrineMigrations\Migrations\AbstractSqlMigration;
+use Ibexa\Bundle\DoctrineMigrations\Configuration\MetadataStorageFactory;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaMigrationTag;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaOnlyDependencyFactory;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\IbexaOnlyMigrationsRepository;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\MigrationRunContext;
-use Ibexa\DoctrineMigrations\Migration\ServiceMigrationsRepository;
 use LogicException;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Argument\BoundArgument;
@@ -28,36 +26,7 @@ use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\DependencyInjection\TypedReference;
 
 /**
- * Collects all services tagged with {@see IbexaMigrationTag::TAG} and wires them into the
- * {@see IbexaOnlyMigrationsRepository::SERVICE_ID} service via a lazy service locator — a
- * {@see ServiceMigrationsRepository} instance that never
- * decorates any inner repository, so it serves Ibexa's own migrations only.
- *
- * For each tagged migration service the pass also binds the Doctrine DBAL {@see Connection},
- * a {@see LoggerInterface} and the {@see MigrationRunContext} (for {@see AbstractSqlMigration}'s
- * constructor) so that migration constructors can receive them through Symfony's auto-wiring or
- * explicit binding without any extra configuration. The first two are sourced from the
- * application's own "doctrine.migrations.dependency_factory" (registered unconditionally by
- * DoctrineMigrationsBundle) via two Ibexa-owned services, "ibexa.doctrine_migrations.connection"
- * and "ibexa.doctrine_migrations.logger" — never via DoctrineMigrationsBundle's own
- * "doctrine.migrations.connection"/"doctrine.migrations.logger" aliases, since those are removed
- * from the container entirely when "enable_service_migrations" is false. The {@see MigrationRunContext} gets the
- * table options configured in "ibexa_doctrine_schema.tables.options", when ibexa/doctrine-schema's bundle sets them.
- *
- * This pass never touches the application's own {@code doctrine.migrations.dependency_factory}
- * or its {@code MigrationsRepository}/{@code Comparator} — Ibexa's migrations are visible
- * exclusively through {@see IbexaOnlyMigrationsRepository::SERVICE_ID} and
- * {@see IbexaOnlyDependencyFactory::SERVICE_ID} (used by the "ibexa:doctrine:migrations:*"
- * commands and {@see TaggedMigrationsRunner}), never
- * by the application's own "doctrine:migrations:*" commands.
- *
- * Finally, the {@see IbexaOnlyDependencyFactory::SERVICE_ID} service — an independent copy of the
- * application's DependencyFactory that always runs against the "ibexa.persistence.connection"
- * service (assumed to exist; it's created by ibexa/core) and uses the Ibexa-only repository above
- * — has its Configuration built from the application's own by
- * {@see IbexaMigrationConfigurationFactory} (a
- * clone carrying an Ibexa-specific migration template, never the exact same instance) and its
- * logger fetched directly from the application's own "doctrine.migrations.dependency_factory".
+ * Wires the Ibexa-tagged migrations into the Ibexa-only migrations repository and DependencyFactory.
  */
 final class RegisterMigrationsPass implements CompilerPassInterface
 {
@@ -125,6 +94,11 @@ final class RegisterMigrationsPass implements CompilerPassInterface
             if ($loggerDefinition instanceof Definition) {
                 $loggerDefinition->setFactory([new Reference('doctrine.migrations.dependency_factory'), 'getLogger']);
             }
+        }
+
+        if ($container->hasDefinition(MetadataStorageFactory::class)) {
+            $container->getDefinition(MetadataStorageFactory::class)
+                ->replaceArgument(0, new Reference('doctrine.migrations.dependency_factory'));
         }
     }
 }
