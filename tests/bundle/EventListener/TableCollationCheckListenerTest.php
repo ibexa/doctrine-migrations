@@ -15,9 +15,9 @@ use Doctrine\Migrations\Metadata\MigrationPlanList;
 use Doctrine\Migrations\MigratorConfiguration;
 use Doctrine\Migrations\Version\Direction;
 use Ibexa\Bundle\DoctrineMigrations\EventListener\TableCollationCheckListener;
+use Ibexa\Contracts\DoctrineMigrations\Exception\TableCollationMismatchException;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\MigrationRunContext;
 use PHPUnit\Framework\TestCase;
-use RuntimeException;
 
 final class TableCollationCheckListenerTest extends TestCase
 {
@@ -71,7 +71,7 @@ final class TableCollationCheckListenerTest extends TestCase
         array $existingTables,
         string $expectedMessage
     ): void {
-        $this->expectException(RuntimeException::class);
+        $this->expectException(TableCollationMismatchException::class);
         $this->expectExceptionMessage($expectedMessage);
 
         $this->runListener($tableOptions, $this->buildMysqlConnection($existingTables));
@@ -150,7 +150,7 @@ final class TableCollationCheckListenerTest extends TestCase
             ['ezcustom_report', 'ibexa_app_*']
         ))->onMigrationsMigrating($this->buildEventArgs($this->buildMysqlConnection($tables)));
 
-        $this->expectException(RuntimeException::class);
+        $this->expectException(TableCollationMismatchException::class);
         $this->expectExceptionMessage(': ibexa_app_log (latin1_swedish_ci). ');
 
         (new TableCollationCheckListener(

@@ -19,10 +19,10 @@ use Doctrine\Migrations\Version\Direction;
 use Ibexa\Bundle\DoctrineMigrations\Configuration\EventDispatcherFactory;
 use Ibexa\Bundle\DoctrineMigrations\EventListener\DryRunListener;
 use Ibexa\Bundle\DoctrineMigrations\EventListener\TableCollationCheckListener;
+use Ibexa\Contracts\DoctrineMigrations\Exception\TableCollationMismatchException;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\MigrationRunContext;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
-use RuntimeException;
 
 final class EventDispatcherFactoryTest extends TestCase
 {
@@ -36,7 +36,7 @@ final class EventDispatcherFactoryTest extends TestCase
             ->willReturn(['ezuser' => 'utf8mb4_unicode_520_ci']);
         $factory = new EventDispatcherFactory(new DryRunListener($context), new TableCollationCheckListener($context));
 
-        $this->expectException(RuntimeException::class);
+        $this->expectException(TableCollationMismatchException::class);
         $this->expectExceptionMessage(': ezuser (utf8mb4_unicode_520_ci).');
 
         $factory->create($this->buildDependencyFactory($connection))
