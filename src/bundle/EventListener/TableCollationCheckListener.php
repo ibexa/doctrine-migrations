@@ -64,7 +64,9 @@ final class TableCollationCheckListener
         }
 
         $expected = self::normalize($this->migrationRunContext->getMysqlTableCollation());
-        $charset = $this->getNewTableCharset($expected);
+        $charset = self::normalize(
+            $this->migrationRunContext->getMysqlTableCharset() ?? self::CHARSET_INDEPENDENT_COLLATION_CHARSET
+        );
         $mismatched = [];
         $tables = $connection->fetchAllKeyValue(
             "SELECT TABLE_NAME, TABLE_COLLATION FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE()
@@ -87,7 +89,7 @@ final class TableCollationCheckListener
             return;
         }
 
-        throw new TableCollationMismatchException($expected, $charset, $mismatched);
+        throw new TableCollationMismatchException($expected, $mismatched);
     }
 
     private function isIbexaTable(string $table): bool
@@ -103,22 +105,6 @@ final class TableCollationCheckListener
         }
 
         return true;
-    }
-
-    /**
-     * A MySQL collation configured without a charset starts with its charset's name, while MariaDB's charset-independent
-     * ones go with utf8mb4.
-     */
-    private function getNewTableCharset(string $collation): string
-    {
-        $charset = $this->migrationRunContext->getMysqlTableCharset();
-        if ($charset !== null) {
-            return self::normalize($charset);
-        }
-
-        $prefix = strstr($collation, '_', true);
-
-        return $prefix === false || str_starts_with($collation, 'uca') ? self::CHARSET_INDEPENDENT_COLLATION_CHARSET : $prefix;
     }
 
     /**

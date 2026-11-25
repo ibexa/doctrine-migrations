@@ -22,7 +22,6 @@ final class TableCollationMismatchException extends RuntimeException
      */
     public function __construct(
         string $expectedCollation,
-        string $charset,
         array $mismatchedCollations
     ) {
         $listed = [];
@@ -33,17 +32,13 @@ final class TableCollationMismatchException extends RuntimeException
         $count = count($mismatchedCollations);
 
         parent::__construct(sprintf(
-            'Ibexa tables use another collation than the %s new tables get from "ibexa_doctrine_schema.tables.options": '
-            . '%s. Foreign keys between them would fail, so nothing was migrated. Configure the collation those tables '
-            . 'use, or convert them first, e.g. "ALTER TABLE %s CONVERT TO CHARACTER SET %s COLLATE %s;", which rewrites '
-            . 'and locks the table and changes how its string values compare: back the database up first. A table that '
-            . 'has to keep its collation can go in "ibexa_doctrine_migrations.table_collation_check.ignored_tables".',
+            'Ibexa tables use another collation than the %s new tables get: %s. Configure their collation in '
+            . '"ibexa_doctrine_schema.tables.options", or convert them first (back the database up: converting '
+            . 'rewrites and locks each table). A table can be skipped with '
+            . '"ibexa_doctrine_migrations.table_collation_check.ignored_tables".',
             $expectedCollation,
             implode(', ', $listed)
-                . ($count > self::LISTED_TABLES ? sprintf(' and %d more', $count - self::LISTED_TABLES) : ''),
-            array_key_first($mismatchedCollations),
-            $charset,
-            $expectedCollation
+                . ($count > self::LISTED_TABLES ? sprintf(' and %d more', $count - self::LISTED_TABLES) : '')
         ));
     }
 }

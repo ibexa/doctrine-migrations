@@ -87,7 +87,7 @@ final class TableCollationCheckListenerTest extends TestCase
         yield 'other collation configured' => [
             $configured,
             ['ezuser' => 'utf8mb4_unicode_520_ci'],
-            'another collation than the utf8mb4_general_ci new tables get from "ibexa_doctrine_schema.tables.options": ezuser (utf8mb4_unicode_520_ci).',
+            'another collation than the utf8mb4_general_ci new tables get: ezuser (utf8mb4_unicode_520_ci).',
         ];
         yield 'a project table matching doesn\'t hide it' => [
             $configured,
@@ -109,30 +109,15 @@ final class TableCollationCheckListenerTest extends TestCase
             ['ezuser' => 'utf8mb3_uca1400_ai_ci'],
             ': ezuser (utf8mb3_uca1400_ai_ci).',
         ];
-        yield 'conversion of the first table' => [
-            $configured,
-            ['ezcontentobject' => 'utf8mb4_unicode_520_ci', 'ezuser' => 'utf8mb4_unicode_520_ci'],
-            'e.g. "ALTER TABLE ezcontentobject CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;"',
-        ];
-        yield 'conversion with the charset of a collation configured alone' => [
-            ['collate' => 'latin1_general_ci'],
-            ['ezuser' => 'utf8mb4_unicode_520_ci'],
-            '"ALTER TABLE ezuser CONVERT TO CHARACTER SET latin1 COLLATE latin1_general_ci;"',
-        ];
-        yield 'conversion to a MariaDB charset-independent collation' => [
-            ['collation' => 'uca1400_ai_ci'],
-            ['ezuser' => 'utf8mb4_unicode_520_ci'],
-            '"ALTER TABLE ezuser CONVERT TO CHARACTER SET utf8mb4 COLLATE uca1400_ai_ci;"',
-        ];
         yield 'what converting does' => [
             $configured,
             ['ezuser' => 'utf8mb4_unicode_520_ci'],
-            'which rewrites and locks the table and changes how its string values compare: back the database up first.',
+            'or convert them first (back the database up: converting rewrites and locks each table).',
         ];
         yield 'ignoring a table' => [
             $configured,
             ['ezuser' => 'utf8mb4_unicode_520_ci'],
-            'can go in "ibexa_doctrine_migrations.table_collation_check.ignored_tables".',
+            'A table can be skipped with "ibexa_doctrine_migrations.table_collation_check.ignored_tables".',
         ];
         yield 'long list' => [
             $configured,
