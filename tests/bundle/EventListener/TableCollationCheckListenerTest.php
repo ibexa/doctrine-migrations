@@ -87,7 +87,7 @@ final class TableCollationCheckListenerTest extends TestCase
         yield 'other collation configured' => [
             $configured,
             ['ezuser' => 'utf8mb4_unicode_520_ci'],
-            'another collation than the utf8mb4_general_ci the tables these migrations create would get, from "ibexa_doctrine_schema.tables.options" (DATABASE_CHARSET and DATABASE_COLLATION in the recipe): ezuser (utf8mb4_unicode_520_ci).',
+            'another collation than the utf8mb4_general_ci new tables get from "ibexa_doctrine_schema.tables.options": ezuser (utf8mb4_unicode_520_ci).',
         ];
         yield 'a project table matching doesn\'t hide it' => [
             $configured,
@@ -127,12 +127,12 @@ final class TableCollationCheckListenerTest extends TestCase
         yield 'what converting does' => [
             $configured,
             ['ezuser' => 'utf8mb4_unicode_520_ci'],
-            'Converting rewrites the whole table and blocks writes to it while it runs, changes every string column in it, including ones given another collation on purpose, and changes how their values compare and sort, so a unique index may reject values that now count as duplicates: back the database up and try it on a copy first.',
+            'which rewrites and locks the table and changes how its string values compare: back the database up first.',
         ];
-        yield 'ignoring a table instead of turning the check off' => [
+        yield 'ignoring a table' => [
             $configured,
             ['ezuser' => 'utf8mb4_unicode_520_ci'],
-            'can go in "ibexa_doctrine_migrations.table_collation_check.ignored_tables" instead, as long as no new foreign key points at it; "enabled: false" there turns the whole check off.',
+            'can go in "ibexa_doctrine_migrations.table_collation_check.ignored_tables".',
         ];
         yield 'long list' => [
             $configured,
