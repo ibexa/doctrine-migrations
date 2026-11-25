@@ -29,7 +29,11 @@ final class EventDispatcherFactoryTest extends TestCase
     public function testDispatchesMigratingToTheTableCollationCheck(): void
     {
         $context = new MigrationRunContext(['collate' => 'utf8mb4_general_ci']);
-        $connection = $this->buildMysqlConnection(['ezuser' => 'utf8mb4_unicode_520_ci']);
+        $connection = $this->buildConnection();
+        $connection->expects(self::once())->method('getDatabasePlatform')->willReturn($this->buildMysqlPlatform());
+        $connection->expects(self::once())
+            ->method('fetchAllKeyValue')
+            ->willReturn(['ezuser' => 'utf8mb4_unicode_520_ci']);
         $factory = new EventDispatcherFactory(new DryRunListener($context), new TableCollationCheckListener($context));
 
         $this->expectException(RuntimeException::class);
@@ -42,7 +46,8 @@ final class EventDispatcherFactoryTest extends TestCase
     public function testDispatchesMigratingWithoutADisabledTableCollationCheck(): void
     {
         $context = new MigrationRunContext(['collate' => 'utf8mb4_general_ci']);
-        $connection = $this->buildMysqlConnection(['ezuser' => 'utf8mb4_unicode_520_ci']);
+        $connection = $this->buildConnection();
+        $connection->expects(self::never())->method('getDatabasePlatform');
         $connection->expects(self::never())->method('fetchAllKeyValue');
         $factory = new EventDispatcherFactory(new DryRunListener($context), null);
 
@@ -51,11 +56,17 @@ final class EventDispatcherFactoryTest extends TestCase
     }
 
     /**
-     * @param array<string, string> $existingTables
-     *
      * @return Connection&MockObject
      */
-    private function buildMysqlConnection(array $existingTables): Connection
+    private function buildConnection(): Connection
+    {
+        $connection = $this->createMock(Connection::class);
+        $connection->expects(self::once())->method('getEventManager')->willReturn(new EventManager());
+
+        return $connection;
+    }
+
+    private function buildMysqlPlatform(): AbstractPlatform
     {
         // DBAL 2 uses MySqlPlatform; DBAL 3 renamed it to MySQLPlatform
         /** @var class-string<AbstractPlatform> $platformClass */
@@ -63,17 +74,12 @@ final class EventDispatcherFactoryTest extends TestCase
             ? 'Doctrine\\DBAL\\Platforms\\MySqlPlatform'
             : 'Doctrine\\DBAL\\Platforms\\MySQLPlatform';
 
-        $connection = $this->createMock(Connection::class);
-        $connection->method('getEventManager')->willReturn(new EventManager());
-        $connection->method('getDatabasePlatform')->willReturn(new $platformClass());
-        $connection->method('fetchAllKeyValue')->willReturn($existingTables);
-
-        return $connection;
+        return new $platformClass();
     }
 
     private function buildDependencyFactory(Connection $connection): DependencyFactory
     {
-        $dependencyFactory = $this->createMock(DependencyFactory::class);
+        $dependencyFactory = $this->createStub(DependencyFactory::class);
         $dependencyFactory->method('getConnection')->willReturn($connection);
 
         return $dependencyFactory;

@@ -10,7 +10,6 @@ namespace Ibexa\Bundle\DoctrineMigrations\EventListener;
 
 use Doctrine\Migrations\Event\MigrationsEventArgs;
 use Doctrine\Migrations\Version\Direction;
-use Ibexa\Contracts\DoctrineMigrations\Migrations\AbstractSqlMigration;
 use Ibexa\Contracts\DoctrineMigrations\Migrations\MigrationRunContext;
 use Ibexa\Contracts\DoctrineSchema\Database\DatabasePlatformName;
 use Ibexa\Contracts\DoctrineSchema\Database\DatabasePlatformResolver;
@@ -30,9 +29,9 @@ use RuntimeException;
 final class TableCollationCheckListener
 {
     /**
-     * What {@see AbstractSqlMigration::addSqlFile()} leaves in the SQL files when nothing is configured.
+     * The charset MariaDB's charset-independent collations ("uca1400_ai_ci") are taken with when none is configured.
      */
-    private const FILE_COLLATION = 'utf8mb4_unicode_520_ci';
+    private const CHARSET_INDEPENDENT_COLLATION_CHARSET = 'utf8mb4';
 
     private const IBEXA_TABLE_PATTERN = '/^(ez|ibexa_)/';
 
@@ -66,21 +65,25 @@ final class TableCollationCheckListener
             return;
         }
 
-        $expected = self::normalize($this->getNewTableCollation());
+        $expected = self::normalize($this->migrationRunContext->getMysqlTableCollation());
+        $charset = $this->getNewTableCharset($expected);
         $mismatched = [];
+        $firstMismatched = null;
         $tables = $connection->fetchAllKeyValue(
             "SELECT TABLE_NAME, TABLE_COLLATION FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE()
                 AND TABLE_TYPE = 'BASE TABLE' AND TABLE_COLLATION IS NOT NULL ORDER BY TABLE_NAME"
         );
         foreach ($tables as $table => $collation) {
-            if (!is_string($collation) || !$this->isIbexaTable((string)$table)) {
+            $table = (string)$table;
+            if (!is_string($collation) || !$this->isIbexaTable($table)) {
                 continue;
             }
 
             $collation = self::normalize($collation);
             // MariaDB's charset-independent names ("uca1400_ai_ci") show with the charset in front
-            if ($collation !== $expected && !str_ends_with($collation, '_' . $expected)) {
+            if ($collation !== $expected && $collation !== $charset . '_' . $expected) {
                 $mismatched[] = sprintf('%s (%s)', $table, $collation);
+                $firstMismatched ??= $table;
             }
         }
 
@@ -92,11 +95,17 @@ final class TableCollationCheckListener
             'Ibexa tables in this database use another collation than the %s the tables these migrations create '
             . 'would get, from "ibexa_doctrine_schema.tables.options" (DATABASE_CHARSET and DATABASE_COLLATION in the '
             . 'recipe): %s. A foreign key between string columns of different collations fails, so nothing was '
-            . 'migrated. Configure the collation those tables use, or convert them to the configured one first. '
-            . 'Tables Ibexa doesn\'t own go in "ibexa_doctrine_migrations.table_collation_check.ignored_tables".',
+            . 'migrated. Configure the collation those tables use, or convert those tables to the configured one '
+            . 'first, columns included, e.g. "ALTER TABLE %s CONVERT TO CHARACTER SET %s COLLATE %s;" ("ALTER TABLE ... '
+            . 'COLLATE" alone changes only the default of new columns). Tables Ibexa doesn\'t own go in '
+            . '"ibexa_doctrine_migrations.table_collation_check.ignored_tables", and '
+            . '"ibexa_doctrine_migrations.table_collation_check.enabled: false" turns this check off.',
             $expected,
             implode(', ', array_slice($mismatched, 0, self::LISTED_TABLES))
-                . (count($mismatched) > self::LISTED_TABLES ? sprintf(' and %d more', count($mismatched) - self::LISTED_TABLES) : '')
+                . (count($mismatched) > self::LISTED_TABLES ? sprintf(' and %d more', count($mismatched) - self::LISTED_TABLES) : ''),
+            $firstMismatched,
+            $charset,
+            $expected
         ));
     }
 
@@ -116,27 +125,31 @@ final class TableCollationCheckListener
     }
 
     /**
-     * The same choice {@see AbstractSqlMigration::addSqlFile()} makes.
+     * A MySQL collation configured without a charset starts with its charset's name, while MariaDB's charset-independent
+     * ones go with utf8mb4.
      */
-    private function getNewTableCollation(): string
+    private function getNewTableCharset(string $collation): string
     {
-        $collation = $this->migrationRunContext->getTableCollation();
-        if ($collation !== null) {
-            return $collation;
+        $charset = $this->migrationRunContext->getMysqlTableCharset();
+        if ($charset !== null) {
+            return self::normalize($charset);
         }
 
-        $charset = $this->migrationRunContext->getTableCharset();
+        $prefix = strstr($collation, '_', true);
 
-        return $charset !== null ? $charset . '_unicode_ci' : self::FILE_COLLATION;
+        return $prefix === false || str_starts_with($collation, 'uca') ? self::CHARSET_INDEPENDENT_COLLATION_CHARSET : $prefix;
     }
 
     /**
      * MySQL 8 reports "utf8" collations, an alias of "utf8mb3", under their utf8mb3 name.
      */
-    private static function normalize(string $collation): string
+    private static function normalize(string $name): string
     {
-        $collation = strtolower($collation);
+        $name = strtolower($name);
+        if ($name === 'utf8') {
+            return 'utf8mb3';
+        }
 
-        return str_starts_with($collation, 'utf8_') ? 'utf8mb3_' . substr($collation, 5) : $collation;
+        return str_starts_with($name, 'utf8_') ? 'utf8mb3_' . substr($name, 5) : $name;
     }
 }

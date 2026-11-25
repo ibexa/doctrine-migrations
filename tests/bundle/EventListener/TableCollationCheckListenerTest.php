@@ -53,6 +53,10 @@ final class TableCollationCheckListenerTest extends TestCase
         yield 'nothing configured, the SQL files\' collation' => [[], ['ezuser' => 'utf8mb4_unicode_520_ci']];
         yield 'charset only' => [['charset' => 'utf8mb4'], ['ezuser' => 'utf8mb4_unicode_ci']];
         yield 'MariaDB charset-independent collation' => [['collation' => 'uca1400_ai_ci'], ['ezuser' => 'utf8mb4_uca1400_ai_ci']];
+        yield 'MariaDB charset-independent collation with a charset' => [
+            ['charset' => 'utf8mb3', 'collation' => 'uca1400_ai_ci'],
+            ['ezuser' => 'utf8mb3_uca1400_ai_ci'],
+        ];
         yield 'utf8 alias' => [['charset' => 'utf8', 'collate' => 'utf8_general_ci'], ['ezuser' => 'utf8mb3_general_ci']];
     }
 
@@ -100,6 +104,31 @@ final class TableCollationCheckListenerTest extends TestCase
             ['ibexa_user' => 'utf8mb4_0900_ai_ci'],
             'than the utf8mb4_unicode_520_ci',
         ];
+        yield 'MariaDB charset-independent collation in another charset' => [
+            ['collation' => 'uca1400_ai_ci'],
+            ['ezuser' => 'utf8mb3_uca1400_ai_ci'],
+            ': ezuser (utf8mb3_uca1400_ai_ci).',
+        ];
+        yield 'conversion of the first table' => [
+            $configured,
+            ['ezcontentobject' => 'utf8mb4_unicode_520_ci', 'ezuser' => 'utf8mb4_unicode_520_ci'],
+            'e.g. "ALTER TABLE ezcontentobject CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;"',
+        ];
+        yield 'conversion with the charset of a collation configured alone' => [
+            ['collate' => 'latin1_general_ci'],
+            ['ezuser' => 'utf8mb4_unicode_520_ci'],
+            '"ALTER TABLE ezuser CONVERT TO CHARACTER SET latin1 COLLATE latin1_general_ci;"',
+        ];
+        yield 'conversion to a MariaDB charset-independent collation' => [
+            ['collation' => 'uca1400_ai_ci'],
+            ['ezuser' => 'utf8mb4_unicode_520_ci'],
+            '"ALTER TABLE ezuser CONVERT TO CHARACTER SET utf8mb4 COLLATE uca1400_ai_ci;"',
+        ];
+        yield 'turning the check off' => [
+            $configured,
+            ['ezuser' => 'utf8mb4_unicode_520_ci'],
+            '"ibexa_doctrine_migrations.table_collation_check.enabled: false" turns this check off.',
+        ];
         yield 'long list' => [
             $configured,
             ['eza' => 'latin1_swedish_ci', 'ezb' => 'latin1_swedish_ci', 'ezc' => 'latin1_swedish_ci', 'ezd' => 'latin1_swedish_ci', 'eze' => 'latin1_swedish_ci', 'ezf' => 'latin1_swedish_ci', 'ezg' => 'latin1_swedish_ci'],
@@ -128,6 +157,7 @@ final class TableCollationCheckListenerTest extends TestCase
     public function testChecksOnlyUpRuns(): void
     {
         $connection = $this->createMock(Connection::class);
+        $connection->expects(self::never())->method('getDatabasePlatform');
         $connection->expects(self::never())->method('fetchAllKeyValue');
 
         (new TableCollationCheckListener(new MigrationRunContext(['collate' => 'utf8mb4_general_ci'])))
@@ -138,7 +168,7 @@ final class TableCollationCheckListenerTest extends TestCase
     {
         $connection = $this->createMock(Connection::class);
         $platformClass = self::getPostgresqlPlatformClass();
-        $connection->method('getDatabasePlatform')->willReturn(new $platformClass());
+        $connection->expects(self::once())->method('getDatabasePlatform')->willReturn(new $platformClass());
         $connection->expects(self::never())->method('fetchAllKeyValue');
 
         $this->runListener(['collate' => 'utf8mb4_general_ci'], $connection);
@@ -152,7 +182,7 @@ final class TableCollationCheckListenerTest extends TestCase
         $platformClass = self::getMysqlPlatformClass();
 
         $connection = $this->createMock(Connection::class);
-        $connection->method('getDatabasePlatform')->willReturn(new $platformClass());
+        $connection->expects(self::once())->method('getDatabasePlatform')->willReturn(new $platformClass());
         $connection->expects(self::once())
             ->method('fetchAllKeyValue')
             ->with(self::stringContains('information_schema.TABLES'))

@@ -17,6 +17,10 @@ namespace Ibexa\Contracts\DoctrineMigrations\Migrations;
  */
 final class MigrationRunContext
 {
+    private const DEFAULT_MYSQL_TABLE_CHARSET = 'utf8mb4';
+
+    private const DEFAULT_MYSQL_TABLE_COLLATION = 'utf8mb4_unicode_520_ci';
+
     private bool $dryRun = false;
 
     private ?string $tableCharset;
@@ -44,14 +48,30 @@ final class MigrationRunContext
         return $this->dryRun;
     }
 
-    public function getTableCharset(): ?string
+    /**
+     * The charset MySQL and MariaDB tables created by {@see AbstractSqlMigration::addSqlFile()} get, null when only a
+     * collation is configured and the server takes the charset from it.
+     */
+    public function getMysqlTableCharset(): ?string
     {
-        return $this->tableCharset;
+        if ($this->tableCharset !== null) {
+            return $this->tableCharset;
+        }
+
+        return $this->tableCollation === null ? self::DEFAULT_MYSQL_TABLE_CHARSET : null;
     }
 
-    public function getTableCollation(): ?string
+    /**
+     * The collation MySQL and MariaDB tables created by {@see AbstractSqlMigration::addSqlFile()} get: like DBAL, a
+     * charset configured without a collation gets the charset's "_unicode_ci" one.
+     */
+    public function getMysqlTableCollation(): string
     {
-        return $this->tableCollation;
+        if ($this->tableCollation !== null) {
+            return $this->tableCollation;
+        }
+
+        return $this->tableCharset !== null ? $this->tableCharset . '_unicode_ci' : self::DEFAULT_MYSQL_TABLE_COLLATION;
     }
 
     /**
