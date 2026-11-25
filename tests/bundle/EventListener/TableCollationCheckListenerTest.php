@@ -124,10 +124,15 @@ final class TableCollationCheckListenerTest extends TestCase
             ['ezuser' => 'utf8mb4_unicode_520_ci'],
             '"ALTER TABLE ezuser CONVERT TO CHARACTER SET utf8mb4 COLLATE uca1400_ai_ci;"',
         ];
-        yield 'turning the check off' => [
+        yield 'what converting does' => [
             $configured,
             ['ezuser' => 'utf8mb4_unicode_520_ci'],
-            '"ibexa_doctrine_migrations.table_collation_check.enabled: false" turns this check off.',
+            'Converting rewrites the whole table and blocks writes to it while it runs, changes every string column in it, including ones given another collation on purpose, and changes how their values compare and sort, so a unique index may reject values that now count as duplicates: back the database up and try it on a copy first.',
+        ];
+        yield 'ignoring a table instead of turning the check off' => [
+            $configured,
+            ['ezuser' => 'utf8mb4_unicode_520_ci'],
+            'can go in "ibexa_doctrine_migrations.table_collation_check.ignored_tables" instead, as long as no new foreign key points at it; "enabled: false" there turns the whole check off.',
         ];
         yield 'long list' => [
             $configured,

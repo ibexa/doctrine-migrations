@@ -97,9 +97,13 @@ final class TableCollationCheckListener
             . 'recipe): %s. A foreign key between string columns of different collations fails, so nothing was '
             . 'migrated. Configure the collation those tables use, or convert those tables to the configured one '
             . 'first, columns included, e.g. "ALTER TABLE %s CONVERT TO CHARACTER SET %s COLLATE %s;" ("ALTER TABLE ... '
-            . 'COLLATE" alone changes only the default of new columns). Tables Ibexa doesn\'t own go in '
-            . '"ibexa_doctrine_migrations.table_collation_check.ignored_tables", and '
-            . '"ibexa_doctrine_migrations.table_collation_check.enabled: false" turns this check off.',
+            . 'COLLATE" alone changes only the default of new columns). Converting rewrites the whole table and blocks '
+            . 'writes to it while it runs, changes every string column in it, including ones given another collation '
+            . 'on purpose, and changes how their values compare and sort, so a unique index may reject values that '
+            . 'now count as duplicates: back the database up and try it on a copy first. A table that has to keep its '
+            . 'collation, or that Ibexa doesn\'t own, can go in "ibexa_doctrine_migrations.table_collation_check.'
+            . 'ignored_tables" instead, as long as no new foreign key points at it; "enabled: false" there turns the '
+            . 'whole check off.',
             $expected,
             implode(', ', array_slice($mismatched, 0, self::LISTED_TABLES))
                 . (count($mismatched) > self::LISTED_TABLES ? sprintf(' and %d more', count($mismatched) - self::LISTED_TABLES) : ''),
